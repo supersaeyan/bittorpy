@@ -3,8 +3,9 @@ import os
 
 class FileSaver(object):
     def __init__(self, outdir, torrent):
+        self.torrent = torrent
         self.file_path = os.path.join(outdir, torrent._name.decode())
-        if torrent._mode == 'multiple':
+        if self.torrent._mode == 'multiple':
             if not os.path.isdir(self.file_path):
                 print("Creating dir", self.file_path)
                 os.mkdir(self.file_path)  # Name in multiple mode becomes directory name, so created that directory if it does not exist
@@ -17,12 +18,12 @@ class FileSaver(object):
 
     def write(self, piece):
         ####FIND FILE INDEXES OF PIECES AND WRITE TO FILES####
-        piece_abs_location, file_idx piece_data, in_conflict, fracture, file_name = piece  # piece_abs_location to be changed to file's index
+        piece_abs_location, file_idx, piece_data, in_conflict, fracture, file_name = piece  # piece_abs_location to be changed to file's index
         print("Writing a Piece")
         print(file_name, in_conflict, piece_abs_location, fracture, file_idx) # Don't print piece_data for the sake of readibility
 
         ####HANDLE THE SINGLE FILE CASE SEPERATELY FROM NON CONFLICT####
-        if torrent._mode == 'single':
+        if self.torrent._mode == 'single':
             self.fd = os.open(self.file_path, os.O_RDWR | os.O_CREAT)  # File_Path is the File_Name in the single file mode
             os.lseek(self.fd, piece_abs_location, os.SEEK_SET)  # Piece index is the File index in case of single file
             os.write(self.fd, piece_data)
