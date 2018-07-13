@@ -64,6 +64,7 @@ class Torrent:
         self.number_of_pieces = math.ceil(self._total_length / self._piece_length)
 
         print("MODE:", self._mode)
+        print("TOTAL LENGTH:", self._total_length)
         self._name = self._metaData[b'info'][b'name']  # Usage depends on _mode
 
         self._info_hash = sha1(bencoding.bencode(self._metaData[b'info'])).digest()
