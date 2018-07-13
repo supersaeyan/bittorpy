@@ -53,7 +53,7 @@ class Peer():
         block  = next(blocks_generator)
 
 
-        print('[{}] Request Block: {}'.format(self, block))
+        # print('[{}] Request Block: {}'.format(self, block))
         msg = struct.pack('>IbIII', 13, 6, block.piece, block.begin, block.length)
         socket.send(msg)
         self.inflight_requests += 1
@@ -91,11 +91,11 @@ class Peer():
         buf = b''
         while True:
             resp = self.__socket.recv(16384)  # Suspends here if there's nothing to be read
-            print('{} Read from peer: {}'.format(self, resp[:8]))
+            # print('{} Read from peer: {}'.format(self, resp[:8]))
 
             buf += resp
 
-            print('Buffer len({}) is {}'.format(len(buf), buf[:8]))
+            # print('Buffer len({}) is {}'.format(len(buf), buf[:8]))
 
             if not buf and not resp:
                 print("NOT BUFFER AND NOT RESPONSE")
