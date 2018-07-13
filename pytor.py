@@ -11,7 +11,7 @@ from torrent import Torrent
 
 
 class Piece(object):
-    def __init__(self, index : int, blocks : list, file_name : str, in_conflict : bool, fracture_idx : int):
+    def __init__(self, index : int, blocks : list, file_name : str, file_idx : int, in_conflict : bool, fracture_idx : int):
         self.index : int = index
         self.blocks : list = blocks
         self.downloaded_blocks : bitstring.BitArray = \
@@ -19,6 +19,7 @@ class Piece(object):
         self.in_conflict : bool = in_conflict
         self.fracture_idx : int = 0
         self.file_name : str = file_name
+        self.file_idx : int = file_idx
 
     def flush(self):
         [block.flush() for block in self.blocks]
@@ -126,7 +127,7 @@ class DownloadSession(object):
             # import pdb; pdb.set_trace()
             print('Piece {} hash is valid'.format(piece.index))
 
-        self.writer.write((piece.index * self.piece_size, piece_data, piece.in_conflict, piece.fracture_idx, piece.file_name))  # Double braces because one set is for the tuple we are sending
+        self.writer.write((piece.index * self.piece_size, piece.file_idx, piece_data, piece.in_conflict, piece.fracture_idx, piece.file_name))  # Double braces because one set is for the tuple we are sending
 
     def get_pieces(self) -> list:
         """
@@ -145,12 +146,14 @@ class DownloadSession(object):
             piece_beg = piece_idx
             blocks = []
             outcome = False
+            fracture = 0
+            file_idx = piece_beg - fracture
             if self.torrent._mode == 'multiple':
                 if len(self.fractures) > 1:  # Probabaly not needed  ####TEST####
                     fracture = self.fractures.pop()
                     if fracture <= piece_end:
                         if fracture >= piece_beg:
-                            # Piece engs after fracture point and also starts before fracture point, therefore the piece is in conflict
+                            # Piece ends after fracture point and also starts before fracture point, therefore the piece is in conflict
                             print('Fracture found in piece {} at {}'.format((piece_beg, piece_end), fracture))
                             outcome = True
                             file_name = self.file_names[file_idx] + '|' + self.file_names[file_idx + 1]  # Assigning file names for both files, existing in the piece in conflict, concatenated with a '|' pipe
@@ -182,7 +185,7 @@ class DownloadSession(object):
                     )
                 )
 
-            this_piece = Piece(piece_idx, blocks, file_name, outcome, fracture)
+            this_piece = Piece(piece_idx, blocks, file_name, file_idx, outcome, fracture)
             pieces.append(this_piece)
         return pieces
 
