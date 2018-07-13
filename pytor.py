@@ -149,8 +149,8 @@ class DownloadSession(object):
         fracture = 0
         for piece_idx in range(self.number_of_pieces):
             file_name = ""
-            piece_end = piece_idx + self.piece_size
-            piece_beg = piece_idx
+            piece_end = piece_idx * self.piece_size + self.piece_size
+            piece_beg = piece_idx * self.piece_size
             blocks = []
             outcome = False
             file_idx = fracture - piece_beg
