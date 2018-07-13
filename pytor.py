@@ -8,6 +8,7 @@ import os
 from file_saver import FileSaver
 from peer import Peer
 from torrent import Torrent
+from pdb import set_trace as brkpt
 
 
 class Piece(object):
@@ -154,6 +155,7 @@ class DownloadSession(object):
             blocks = []
             outcome = False
             file_idx = fracture - piece_beg
+            brkpt()
             if self.torrent._mode == 'multiple':
                 if len(self.fractures) > 1:  # Probabaly not needed  ####TEST####
                     if self.fractures[file_iter] <= piece_end:
