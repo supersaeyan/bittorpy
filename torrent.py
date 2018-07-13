@@ -7,6 +7,8 @@ import requests
 import struct
 import socket
 import bitstring
+import random
+import string
 
 
 class Torrent:
@@ -98,9 +100,13 @@ class Torrent:
     def __get_peers(self):
         self.peers = []
         numwant = 20
+        peer_id = 'SA' + ''.join(
+            random.choice(string.ascii_lowercase + string.digits)
+            for i in range(18)
+            )
         params = {
             'info_hash': self._info_hash,
-            'peer_id': 'a1b2c3d4e5f6g7h8i9j0',
+            'peer_id': peer_id,
             'port': 6881,
             'uploaded': 0,
             'downloaded': 0,
