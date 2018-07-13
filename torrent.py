@@ -1,0 +1,141 @@
+import math
+import bencoding
+from pprint import pprint, pformat
+import os
+from hashlib import sha1
+import requests
+import struct
+import socket
+import bitstring
+
+
+class Torrent:
+    def __init__(self, file_path):
+        if os.path.isfile(file_path) and file_path.split('.')[-1] == 'torrent':
+            with open(file_path, 'rb') as f:
+                self._metaData = bencoding.bdecode(f.read())
+        else:
+            raise ValueError('Invalid torrent file')
+
+        self._announce = self._metaData[b'announce']
+
+        if b'private' in self._metaData[b'info']:
+            self._isPrivate = True if int(self._metaData[b'info'][b'private']) == 1 else False
+        else:
+            self._isPrivate = False
+
+        self._pieces = self._metaData[b'info'][b'pieces']
+
+        self._piece_length = self._metaData[b'info'][b'piece length']
+
+        if b'announce-list' not in self._metaData:
+            self._trackers = [self._announce]
+        else:
+            self._trackers = self._metaData[b'announce-list']
+            self._trackers = [tracker for sublist in self._trackers for tracker in sublist if b'ipv6' not in tracker]
+
+        if b'creation date' in self._metaData:
+            self._creationDate = self._metaData[b'creation date']
+
+        if b'comment' in self._metaData:
+            self._comment = self._metaData[b'comment']
+
+        if b'created by' in self._metaData:
+            self._createdBy = self._metaData[b'created by']
+
+        if b'encoding' in self._metaData:
+            self._encoding = self._metaData[b'encoding']
+
+        if b'files' not in self._metaData[b'info']:
+            self._mode = 'single'
+            self._total_length = self._metaData[b'info'][b'length']
+            if b'md5sum' in self._metaData:
+                self._md5sum = self._metaData[b'info'][b'md5sum']
+        else:
+            self._mode = 'multiple'
+            self._files = self._metaData[b'info'][b'files']
+            # Man Made stuff here onwards
+
+            # self.Fractures stores File finish indexes
+            self._files, self._total_length, self.fractures = self.__parse_files()
+
+        self.number_of_pieces = math.ceil(self._total_length / self._piece_length)
+
+        print("MODE:", self._mode)
+        self._name = self._metaData[b'info'][b'name']  # Usage depends on _mode
+
+        self._info_hash = sha1(bencoding.bencode(self._metaData[b'info'])).digest()
+
+        self.__get_peers()
+
+        print('Pieces', self.number_of_pieces)
+
+        print(self.peers)
+
+    def get_piece_hash(self, piece_idx):
+        return self._metaData[b'info'][b'pieces'][piece_idx*20: (piece_idx*20) + 20]
+
+    def __parse_files(self):
+        parsed_files = []
+        fractures = []
+        total_length = 0
+        for file in self._files:
+            file_length = file[b'length']
+            file_path = file[b'path']
+            if b'md5sum' in file:
+                file_md5sum = file[b'md5sum']
+                parsed_files.append({b'length': file_length, b'path': file_path, b'md5sum': file_md5sum})
+            else:
+                parsed_files.append({b'length': file_length, b'path': file_path})
+
+            total_length += file_length
+            fractures.append(total_length)
+            print(total_length)
+
+        # fractures = fractures[::-1]  # Reversed for popping in the right order
+        return parsed_files, total_length, fractures
+
+    def __get_peers(self):
+        self.peers = []
+        numwant = 20
+        params = {
+            'info_hash': self._info_hash,
+            'peer_id': 'a1b2c3d4e5f6g7h8i9j0',
+            'port': 6881,
+            'uploaded': 0,
+            'downloaded': 0,
+            'left': self._total_length,
+            'compact': 1,
+            'no_peer_id': 1,
+            'event': 'started',
+            # 'numwant': numwant
+        }
+        # pprint(self._trackers)
+        # pprint(params)
+        for url in self._trackers:
+            try:
+                print(url)
+                r = requests.get(url, params=params, timeout=10)
+            except Exception as e:
+                print("Exception occurred for {}\n{}".format(url, e))
+                continue
+            resp = bencoding.bdecode(r.content)
+            print(r.status_code, r.reason)
+            peers = resp[b'peers']
+            # pprint(resp)
+            start = 0
+
+            if isinstance(peers, list):
+                self.peers = peers
+            elif len(peers) % 6 == 0:
+                while start < len(peers):
+                    ip = peers[start:start+4]
+                    ip = socket.inet_ntoa(ip)
+                    port = peers[start+4:start+6]
+                    port, = struct.unpack('!H', port)
+                    # self.peers.append({b'ip': ip, b'port': port})
+                    self.peers.append((ip, port))
+                    start += 6
+
+    def __str__(self):
+        return pformat(self._metaData)
