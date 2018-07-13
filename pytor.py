@@ -18,7 +18,7 @@ class Piece(object):
         self.downloaded_blocks : bitstring.BitArray = \
             bitstring.BitArray(bin='0'*len(blocks))
         self.in_conflict : bool = in_conflict
-        self.fracture_idx : int = 0
+        self.fracture_idx : int = fracture_idx
         self.file_name : str = file_name
         self.file_idx : int = file_idx
 
