@@ -154,7 +154,7 @@ class DownloadSession(object):
             piece_beg = piece_idx * self.piece_size
             blocks = []
             outcome = False
-            file_idx = fracture - piece_beg
+            file_idx = piece_beg - fracture  # Piece's absolute index - previous fracture point i.e previous files' length
             brkpt()
             if self.torrent._mode == 'multiple':
                 if len(self.fractures) > 1:  # Probabaly not needed  ####TEST####
