@@ -89,7 +89,7 @@ class DownloadSession(object):
         print("DLSESSION", self.torrent._mode, self.fractures)
         if self.torrent._mode == 'multiple':
             self.file_names = [os.path.join(*file[b'path']).decode() for file in self.torrent._files]  # Files list for popping in order, then processed path key to get final name
-            print(self.file_names)
+            # print(self.file_names)
         
         self.pieces : list = self.get_pieces()
         self.pieces_in_progress : Dict[int, Piece] = {}  # NOT USED  ####TEST####
@@ -153,11 +153,11 @@ class DownloadSession(object):
             piece_beg = piece_idx
             blocks = []
             outcome = False
-            file_idx = piece_beg - fracture
+            file_idx = fracture - piece_beg
             if self.torrent._mode == 'multiple':
                 if len(self.fractures) > 1:  # Probabaly not needed  ####TEST####
                     if self.fractures[file_iter] <= piece_end:
-                        if self.fractures[file_iter]:
+                        if self.fractures[file_iter] >= piece_beg:
                             # Piece ends after fracture point and also starts before fracture point, therefore the piece is in conflict
                             print('Fracture found in piece {} at {}'.format(piece_idx, fracture))
                             outcome = True

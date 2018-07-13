@@ -92,7 +92,7 @@ class Torrent:
 
             total_length += file_length
             fractures.append(total_length)
-            print(total_length)
+            # print(total_length)
 
         # fractures = fractures[::-1]  # Reversed for popping in the right order
         return parsed_files, total_length, fractures
