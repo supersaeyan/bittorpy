@@ -79,14 +79,13 @@ class Block(object):
         )
 
 
-# TODO: check if file isn't already downloaded
 class DownloadSession(object):
     def __init__(self, torrent, writer):
         self.writer = writer
         self.torrent : Torrent = torrent
         self.piece_size : int = self.torrent._metaData[b'info'][b'piece length']
         self.number_of_pieces : int = self.torrent.number_of_pieces
-        self.fractures = self.torrent.fractures[::-1]
+        self.fractures = self.torrent.fractures
         print("DLSESSION", self.torrent._mode, self.fractures)
         if self.torrent._mode == 'multiple':
             self.file_names = [os.path.join(*file[b'path']).decode() for file in self.torrent._files]  # Files list for popping in order, then processed path key to get final name
@@ -141,36 +140,39 @@ class DownloadSession(object):
         # TODO: fix bug where blocks are incorrectly generated for
         # files less than the 16384
 
+        ####FILE_ITER is the file's number####
+        ####FILE_IDX is the piece's index inside its file####
         pieces = []
         blocks_per_piece = math.ceil(self.piece_size / 16384)
         file_idx = 0
+        file_iter = 0
+        fracture = 0
         for piece_idx in range(self.number_of_pieces):
             file_name = ""
             piece_end = piece_idx + self.piece_size
             piece_beg = piece_idx
             blocks = []
             outcome = False
-            fracture = 0
             file_idx = piece_beg - fracture
             if self.torrent._mode == 'multiple':
                 if len(self.fractures) > 1:  # Probabaly not needed  ####TEST####
-                    fracture = self.fractures.pop()
-                    if fracture <= piece_end:
-                        if fracture >= piece_beg:
+                    if self.fractures[file_iter] <= piece_end:
+                        if self.fractures[file_iter]:
                             # Piece ends after fracture point and also starts before fracture point, therefore the piece is in conflict
-                            print('Fracture found in piece {} at {}'.format((piece_beg, piece_end), fracture))
+                            print('Fracture found in piece {} at {}'.format(piece_idx, fracture))
                             outcome = True
-                            file_name = self.file_names[file_idx] + '|' + self.file_names[file_idx + 1]  # Assigning file names for both files, existing in the piece in conflict, concatenated with a '|' pipe
-                            file_idx += 1
+                            file_name = self.file_names[file_iter] + '|' + self.file_names[file_iter + 1]  # Assigning file names for both files, existing in the piece in conflict, concatenated with a '|' pipe
+                            fracture = self.fractures[file_iter]
+                            file_iter += 1
                         else:
                             # Piece ends after fracture point but does not start before fracture, therefore belongs to a future file and getting here is an ANOMALY
                             print("[ERROR] FUTURE FILE PIECE ANOMALY")
                     else:
                         # Piece ends before fracture point, going in order, so belongs to current file
-                        file_name = self.file_names[file_idx]
+                        file_name = self.file_names[file_iter]
                 elif len(self.fractures) == 1:
                     print('Last fracture is at the end of data.')
-                    print('Last fracture:', self.fractures.pop())
+                    print('Last fracture:', self.fractures[-1])
                 else:
                     print('No fractures left in the list')
 
