@@ -51,9 +51,13 @@ class Piece(object):
         return hashlib.sha1(self.data)
 
     def __repr__(self):
-        return '<Piece: {} Blocks: {}>'.format(
+        return '<Piece: {} Blocks: {} In Conflict: {} File Index: {} File Name: {} Fracture Point {}>'.format(
             self.index,
-            len(self.blocks)
+            len(self.blocks),
+            self.in_conflict,
+            self.file_idx,
+            self.file_name,
+            self.fracture_idx
         )
 
 
@@ -186,6 +190,7 @@ class DownloadSession(object):
                 )
 
             this_piece = Piece(piece_idx, blocks, file_name, file_idx, outcome, fracture)
+            print(this_piece)
             pieces.append(this_piece)
         return pieces
 
