@@ -103,7 +103,7 @@ class Peer():
 
             while True:
                 if len(buf) < 4:
-                    print('Buffer is too short')
+                    # print('Buffer is too short', len(buf))
                     break
 
                 length = struct.unpack('>I', buf[0:4])[0]
@@ -123,7 +123,7 @@ class Peer():
                     print('[Message] Keep Alive')
                     buf = consume(buf)
                     data = get_data(buf)
-                    print('[DATA]', data)
+                    # print('[DATA]', data)
                     continue
 
                 if len(buf) < 5:
@@ -136,7 +136,7 @@ class Peer():
                     print('[Message] CHOKE')
                     data = get_data(buf)
                     buf = consume(buf)
-                    print('[DATA]', data)
+                    # print('[DATA]', data)
 
                 elif msg_id == 1:
                     data = get_data(buf)
