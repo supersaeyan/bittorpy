@@ -10,6 +10,7 @@ from file_saver import FileSaver
 from peer import Peer
 from torrent import Torrent
 from pdb import set_trace as brkpt
+import warnings
 
 
 class Piece(object):
@@ -115,7 +116,7 @@ class DownloadSession(object):
 
         # Verify all blocks in the Piece have been downloaded
         if not piece.is_complete():
-            print('Piece not complete')
+            # print('Piece not complete')
             return
 
         self.received_pieces[piece_idx] = piece
@@ -240,7 +241,7 @@ async def download(torrent_file : str, download_location : str, loop=None):
     torrent = Torrent(torrent_file)
 
     torrent_writer = FileSaver(download_location, torrent)
-    session = DownloadSession(torrent, torrent_writer)  # FILESAVER
+    session = DownloadSession(torrent, torrent_writer.get_received_pieces_queue())  # FILESAVER
 
     peers_info = torrent.peers  # ASYNCIFY THIS using await
 
@@ -262,5 +263,9 @@ if __name__ == '__main__':
     sys.stdout = Tee(sys.stdout, f)
 
     loop = asyncio.get_event_loop()
+    # For Debugging
+    loop.set_debug(True)
+    loop.slow_callback_duration = 0.001
+    warnings.simplefilter('always', ResourceWarning)
     loop.run_until_complete(download(sys.argv[1], './downloads', loop=loop))
     loop.close()
