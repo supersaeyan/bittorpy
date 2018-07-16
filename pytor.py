@@ -117,13 +117,15 @@ class DownloadSession(object):
             print('Piece not complete')
             return
 
+        self.received_pieces[piece_idx] = piece
         piece_data = piece.data
 
         res_hash = hashlib.sha1(piece_data).digest()
         exp_hash = self.torrent.get_piece_hash(piece.index)
 
         if res_hash != exp_hash:
-            # TODO: re-enqueue request
+            # TODO: CHECK if it worked
+            del self.received_pieces[piece_idx]
             print('Hash check failed for Piece {}'.format(piece.index))
             piece.flush()
             return
@@ -131,7 +133,7 @@ class DownloadSession(object):
             # import pdb; pdb.set_trace()
             print('Piece {} hash is valid'.format(piece.index))
 
-        self.writer.write((piece.index * self.piece_size, piece.file_idx, piece_data, piece.in_conflict, piece.fracture_idx, piece.file_name))  # Double braces because one set is for the tuple we are sending
+        self.writer.write((piece.index * self.piece_size, piece.file_idx, piece_data, piece.in_conflict, piece.fracture_idx, piece.file_name, piece))  # Double braces because one set is for the tuple we are sending
 
     def get_pieces(self) -> list:
         """
@@ -203,7 +205,7 @@ class DownloadSession(object):
         Determines next piece for downloading. Expects BitArray
         of pieces a peer can request
         """
-        for piece in self.pieces:
+        for piece in self.pieces:  # Synchronous if available
             # Don't create request out of pieces we already have
             is_piece_downloaded = piece.index in self.received_pieces
             is_piece_in_progress = piece.index in self.pieces_in_progress

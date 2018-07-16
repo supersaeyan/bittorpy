@@ -166,7 +166,8 @@ class Peer():
                 elif msg_id == 5:
                     bitfield = buf[5: 5 + length - 1]
                     self.have_pieces = bitstring.BitArray(bitfield)
-                    print('[Message] Bitfield: {}'.format(bitfield))
+                    # print('[Message] Bitfield: {}'.format(bitfield))
+                    print('[Message] Bitfield: {}'.format(self.have_pieces))
 
                     # buf = buf[5 + length - 1:]
                     buf = buf[4 + length:]
