@@ -1,3 +1,4 @@
+import asyncio
 import bitstring
 import hashlib
 import math
@@ -81,21 +82,21 @@ class Block(object):
 
 
 class DownloadSession(object):
-    def __init__(self, torrent, writer):
-        self.writer = writer
+    def __init__(self, torrent : Torrent, writer : asyncio.Queue = None):
+        # self.writer = writer
         self.torrent : Torrent = torrent
         self.piece_size : int = self.torrent._metaData[b'info'][b'piece length']
         self.number_of_pieces : int = self.torrent.number_of_pieces
-        self.fractures = self.torrent.fractures
-        print("DLSESSION", self.torrent._mode, self.fractures)
         if self.torrent._mode == 'multiple':
+            self.fractures = self.torrent.fractures
+            print("DLSESSION", self.torrent._mode, self.fractures)
             self.file_names = [os.path.join(*file[b'path']).decode() for file in self.torrent._files]  # Files list for popping in order, then processed path key to get final name
             # print(self.file_names)
         
         self.pieces : list = self.get_pieces()
         self.pieces_in_progress : Dict[int, Piece] = {}  # NOT USED  ####TEST####
-        self.received_pieces : Dict[int, Piece]= {}  # NOT USED  ####TEST####
-        # self.received_blocks = received_blocks
+        self.received_pieces : Dict[int, Piece]= {}  ####TEST####
+        self.received_pieces_queue : asyncio.Queue = writer
         self.info_hash = self.torrent._info_hash
 
 
@@ -133,15 +134,14 @@ class DownloadSession(object):
             # import pdb; pdb.set_trace()
             print('Piece {} hash is valid'.format(piece.index))
 
-        self.writer.write((piece.index * self.piece_size, piece.file_idx, piece_data, piece.in_conflict, piece.fracture_idx, piece.file_name, piece))  # Double braces because one set is for the tuple we are sending
+        # Only runs when a piece is complete
+        # Double braces because one set is for the tuple being sent
+        self.received_pieces_queue.put_nowait((piece.index * self.piece_size, piece.file_idx, piece_data, piece.in_conflict, piece.fracture_idx, piece.file_name, piece))
 
     def get_pieces(self) -> list:
         """
         Generates list of pieces and their blocks
         """
-
-        # TODO: fix bug where blocks are incorrectly generated for
-        # files less than the 16384
 
         ####FILE_ITER is the file's number####
         ####FILE_IDX is the piece's index inside its file####
@@ -157,7 +157,7 @@ class DownloadSession(object):
             blocks = []
             outcome = False
             file_idx = piece_beg - fracture  # Piece's absolute index - previous fracture point i.e previous files' length
-            brkpt()
+            # brkpt()
             if self.torrent._mode == 'multiple':
                 if len(self.fractures) > 1:  # Probabaly not needed  ####TEST####
                     if self.fractures[file_iter] <= piece_end:
@@ -236,15 +236,13 @@ class Tee(object):
             f.write(obj)
 
 
-def download(torrent_file : str, download_location : str):
-    # Parse torrent file
+async def download(torrent_file : str, download_location : str, loop=None):
     torrent = Torrent(torrent_file)
-    # print('Torrent: {}'.format(torrent))
 
     torrent_writer = FileSaver(download_location, torrent)
     session = DownloadSession(torrent, torrent_writer)  # FILESAVER
 
-    peers_info = torrent.peers
+    peers_info = torrent.peers  # ASYNCIFY THIS using await
 
     seen_peers = set()
     peers = [
@@ -255,13 +253,14 @@ def download(torrent_file : str, download_location : str):
 
     print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
 
-    for peer in peers:
-        if peer.inflight_requests < 1:
-            peer.download()
+    await (asyncio.gather(*[peer.download() for peer in peers if peer.inflight_requests < 1]))
 
 
 if __name__ == '__main__':
     f = open('logfile', 'w')
     backup = sys.stdout
     sys.stdout = Tee(sys.stdout, f)
-    download(sys.argv[1], './downloads')
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(download(sys.argv[1], './downloads', loop=loop))
+    loop.close()

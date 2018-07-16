@@ -1,8 +1,9 @@
+import asyncio
 import struct
-import socket
 from collections import defaultdict
 import traceback
 import bitstring
+# import socket
 
 
 class Peer():
@@ -29,11 +30,11 @@ class Peer():
             "a1b2c3d4e5f6g7h8i9j0".encode()
         )
 
-    def send_interested(self, socket):
+    async def send_interested(self, writer):
         # TODO: refactor into messages util
         msg = struct.pack('>Ib', 1, 2)
-        socket.send(msg)
-        # await writer.drain()
+        writer.write(msg)
+        await writer.drain()
 
     def get_blocks_generator(self):
         def blocks():
@@ -46,7 +47,7 @@ class Peer():
             self.blocks = blocks()
         return self.blocks
 
-    def request_a_piece(self, socket):
+    async def request_a_piece(self, writer):
         if self.inflight_requests > 1:
             return
         blocks_generator = self.get_blocks_generator()
@@ -55,42 +56,47 @@ class Peer():
 
         # print('[{}] Request Block: {}'.format(self, block))
         msg = struct.pack('>IbIII', 13, 6, block.piece, block.begin, block.length)
-        socket.send(msg)
+        writer.write(msg)
         self.inflight_requests += 1
-        # await writer.drain()
+        await writer.drain()
 
-    def download(self):
+    async def download(self):
         retries = 0
         while retries < 5:
             retries += 1
             try:
-                self._download()
+                await self._download()
             except Exception as e:
                 print('Error downloading: {}\n\n'.format(self.host))
                 traceback.print_exc()
 
-    def _download(self):
+    async def _download(self):
         try:
-            self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.__socket.connect((self.host, self.port))
-            self.__socket.settimeout(10.0)
+            # self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # self.__socket.connect((self.host, self.port))
+            # self.__socket.settimeout(10.0)
+            reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection(self.host, self.port),
+                    timeout=10
+            )
+
         except ConnectionError:
             print('Failed to connect to Peer {}\n\n'.format(self.host))
             traceback.print_exc()
             return
 
         print('{} Sending handshake'.format(self))
-        self.__socket.send(self.handshake())
-        # await writer.drain()
+        # self.__socket.send(self.handshake())
+        writer.write(self.handshake())
+        await writer.drain()
 
-        # TODO: Validate handshake
-        handshake = self.__socket.recv(68)  # Suspends here if there's nothing to be read
+        handshake = await reader.read(68)  # Suspends here if there's nothing to be read
 
-        self.send_interested(self.__socket)
+        await self.send_interested(writer)
 
         buf = b''
         while True:
-            resp = self.__socket.recv(16384)  # Suspends here if there's nothing to be read
+            resp = await reader.read(16384)  # Suspends here if there's nothing to be read
             # print('{} Read from peer: {}'.format(self, resp[:8]))
 
             buf += resp
@@ -171,7 +177,7 @@ class Peer():
 
                     # buf = buf[5 + length - 1:]
                     buf = buf[4 + length:]
-                    self.send_interested(self.__socket)
+                    await self.send_interested(writer)
 
                 elif msg_id == 7:
                     self.inflight_requests -= 1
@@ -183,7 +189,7 @@ class Peer():
                         parts = struct.unpack('>IbII' + str(l - 9) + 's', data[:length + 4])
                         piece_idx, begin, data = parts[2], parts[3], parts[4]
                         self.session.on_block_received(piece_idx, begin, data)
-                        print('Got piece idx {} begin {}'.format(piece_idx, begin))
+                        print('Got piece idx {} - Block begin idx {}'.format(piece_idx, begin))
                     except struct.error:
                         print('error decoding piece')
                         return None
@@ -207,7 +213,7 @@ class Peer():
                     if msg_id == 159:
                         exit(1)
 
-                self.request_a_piece(self.__socket)
+                await self.request_a_piece(writer)
 
 
     def __repr__(self):
