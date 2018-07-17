@@ -95,7 +95,6 @@ class Torrent:
             fractures.append(total_length)
             # print(total_length)
 
-        # fractures = fractures[::-1]  # Reversed for popping in the right order
         return parsed_files, total_length, fractures
 
     def __get_peers(self):
@@ -117,8 +116,6 @@ class Torrent:
             'event': 'started',
             # 'numwant': numwant
         }
-        # pprint(self._trackers)
-        # pprint(params)
         for url in self._trackers:
             try:
                 print(url)
@@ -129,7 +126,6 @@ class Torrent:
             resp = bencoding.bdecode(r.content)
             print(r.status_code, r.reason)
             peers = resp[b'peers']
-            # pprint(resp)
             start = 0
 
             if isinstance(peers, list):
@@ -140,7 +136,6 @@ class Torrent:
                     ip = socket.inet_ntoa(ip)
                     port = peers[start+4:start+6]
                     port, = struct.unpack('!H', port)
-                    # self.peers.append({b'ip': ip, b'port': port})
                     self.peers.append((ip, port))
                     start += 6
 

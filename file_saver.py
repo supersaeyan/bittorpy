@@ -11,7 +11,10 @@ class FileSaver(object):
                 print("Creating dir", self.file_path)
                 os.mkdir(self.file_path)  # Name in multiple mode becomes directory name, so created that directory if it does not exist
 
-        # self.fd = os.open(self.file_name, os.O_RDWR | os.O_CREAT)
+        else:
+            # single file mode
+            self.fd = os.open(self.file_path, os.O_RDWR | os.O_CREAT)  # File_Path is the File_Name in the single file mode
+
         self.received_pieces_queue = asyncio.Queue()
         asyncio.ensure_future(self.write())
 
@@ -26,15 +29,14 @@ class FileSaver(object):
 
             piece_abs_location, file_idx, piece_data, in_conflict, fracture, file_name, piece_instance = piece  # piece_abs_location to be changed to file's index
             print("Writing a Piece")
-            print(file_name, in_conflict, piece_abs_location, fracture, file_idx) # Don't print piece_data for the sake of readibility
+            print("Name: {} Conflicted: {} PIECE ABS LOCATION: {} FRACTURE POINT: {} LOCATION IN FILE: {}".format(file_name, in_conflict, piece_abs_location, fracture, file_idx)) # Don't print piece_data for the sake of readibility
 
             ####HANDLE THE SINGLE FILE CASE SEPERATELY FROM NON CONFLICT####
             if self.torrent._mode == 'single':
-                self.fd = os.open(self.file_path, os.O_RDWR | os.O_CREAT)  # File_Path is the File_Name in the single file mode
                 os.lseek(self.fd, piece_abs_location, os.SEEK_SET)  # Piece index is the File index in case of single file
                 os.write(self.fd, piece_data)
                 piece_instance.flush()  # Remove from RAM after writing to disk
-                os.close(self.fd)
+                # os.close(self.fd)
             else:
                 if not in_conflict:
                     self.file_name = os.path.join(self.file_path, file_name)  # File_name won't change so created beforehand 

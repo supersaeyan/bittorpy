@@ -152,13 +152,13 @@ class DownloadSession(object):
         fracture = 0
         for piece_idx in range(self.number_of_pieces):
             file_name = ""
-            piece_end = piece_idx * self.piece_size + self.piece_size
-            piece_beg = piece_idx * self.piece_size
             blocks = []
             outcome = False
-            file_idx = piece_beg - fracture  # Piece's absolute index - previous fracture point i.e previous files' length
             # brkpt()
             if self.torrent._mode == 'multiple':
+                piece_end = piece_idx * self.piece_size + self.piece_size
+                piece_beg = piece_idx * self.piece_size
+                file_idx = piece_beg - fracture  # Piece's absolute index - previous fracture point i.e previous files' length
                 if len(self.fractures) > 1:  # Probabaly not needed  ####TEST####
                     if self.fractures[file_iter] <= piece_end:
                         if self.fractures[file_iter] >= piece_beg:
@@ -196,7 +196,7 @@ class DownloadSession(object):
                 )
 
             this_piece = Piece(piece_idx, blocks, file_name, file_idx, outcome, fracture)
-            # print(this_piece)
+            print(this_piece)
             pieces.append(this_piece)
         return pieces
 
@@ -212,6 +212,7 @@ class DownloadSession(object):
 
             # Skip pieces we already have
             if is_piece_downloaded or is_piece_in_progress:
+                print('is piece downloaded LENGTH {}\nis piece progress LENGTH {}'.format(len(is_piece_downloaded), len(is_piece_in_progress)))
                 continue
 
             if have_pieces[piece.index]:
