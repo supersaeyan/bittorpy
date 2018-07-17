@@ -11,6 +11,7 @@ from peer import Peer
 from torrent import Torrent
 from pdb import set_trace as brkpt
 import warnings
+from tqdm import tqdm
 
 
 class Piece(object):
@@ -150,7 +151,7 @@ class DownloadSession(object):
         file_idx = 0
         file_iter = 0
         fracture = 0
-        for piece_idx in range(self.number_of_pieces):
+        for piece_idx in tqdm(range(self.number_of_pieces)):
             file_name = ""
             blocks = []
             outcome = False
@@ -196,7 +197,7 @@ class DownloadSession(object):
                 )
 
             this_piece = Piece(piece_idx, blocks, file_name, file_idx, outcome, fracture)
-            print(this_piece)
+            # print(this_piece)
             pieces.append(this_piece)
         return pieces
 
@@ -212,7 +213,7 @@ class DownloadSession(object):
 
             # Skip pieces we already have
             if is_piece_downloaded or is_piece_in_progress:
-                print('is piece downloaded {}\nis piece progress {}'.format(is_piece_downloaded, is_piece_in_progress))
+                print('IDX {} is piece downloaded {}\nis piece progress {}'.format(piece.index, is_piece_downloaded, is_piece_in_progress))
                 continue
 
             if have_pieces[piece.index]:

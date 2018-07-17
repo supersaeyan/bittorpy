@@ -65,18 +65,20 @@ class Torrent:
 
         print("MODE:", self._mode)
         print("TOTAL LENGTH:", self._total_length)
+        print("PIECE_LEN:", self._piece_length)
+        print("NO. OF PIECES:", self.number_of_pieces)
+        print("LAST PIECE LEN:", self._total_length % self._piece_length)
+
         self._name = self._metaData[b'info'][b'name']  # Usage depends on _mode
 
         self._info_hash = sha1(bencoding.bencode(self._metaData[b'info'])).digest()
 
         self.__get_peers()
 
-        print('Pieces', self.number_of_pieces)
-
         print(self.peers)
 
     def get_piece_hash(self, piece_idx):
-        return self._metaData[b'info'][b'pieces'][piece_idx*20: (piece_idx*20) + 20]
+        return self._pieces[piece_idx*20: (piece_idx*20) + 20]
 
     def __parse_files(self):
         parsed_files = []
