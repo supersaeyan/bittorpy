@@ -4,7 +4,7 @@ import hashlib
 import math
 import sys
 from typing import Dict, List
-from pprint import pformat
+from pprint import pformat, pprint
 import os
 from file_saver import FileSaver
 from peer import Peer
@@ -212,7 +212,8 @@ class DownloadSession(object):
 
             # Skip pieces we already have
             if is_piece_downloaded or is_piece_in_progress:
-                print('IDX {} is_piece_downloaded {}\nis_piece_in_progress {}'.format(piece.index, is_piece_downloaded, is_piece_in_progress))
+                print('IDX {} is_piece_downloaded {}'.format(piece.index, is_piece_downloaded))
+                print('IDX {} is_piece_in_progress {}'.format(piece.index, is_piece_in_progress))
                 continue
 
             if have_pieces[piece.index]:
@@ -255,7 +256,8 @@ async def download(torrent_file : str, download_location : str, loop=None):
 
     print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
 
-    await (asyncio.gather(*[peer.download() for peer in peers if peer.inflight_requests < 1]))
+    bit_fields = await (asyncio.gather(*[peer.get_bitfield() for peer in peers if peer.inflight_requests < 1]))
+    pprint(bit_fields)
 
 
 if __name__ == '__main__':
