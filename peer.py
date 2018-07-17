@@ -71,7 +71,7 @@ class Peer():
                 self.inflight_requests -= 1
                 traceback.print_exc()
 
-    async def _get_bitfield():
+    async def _get_bitfield(self):
         try:
             reader, writer = await asyncio.wait_for(
                     asyncio.open_connection(self.host, self.port),
@@ -191,7 +191,7 @@ class Peer():
                 elif msg_id == 5:
                     bitfield = buf[5: 5 + length - 1]
                     self.have_pieces = bitstring.BitArray(bitfield)
-                    return self.have_pieces
+                    return (self.have_pieces, self.host, self.port)
 
                 else:
                     print('unknown ID {}'.format(msg_id))
