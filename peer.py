@@ -80,8 +80,8 @@ class Peer():
                     timeout=10
             )
 
-        except ConnectionError:
-            print('Failed to connect to Peer {}\n\n'.format(self.host))
+        except Exception as e:
+            print('Failed to connect to Peer {}\n\n'.format(self.host, e))
             traceback.print_exc()
             return
 
@@ -90,13 +90,28 @@ class Peer():
         writer.write(self.handshake())
         await writer.drain()
 
-        handshake = await asyncio.wait_for(reader.read(68), timeout=5)  # Suspends here if there's nothing to be read
+        try:
+            handshake = await asyncio.wait_for(reader.read(68), timeout=5)  # Suspends here if there's nothing to be read
+        except Exception as e:
+            print('Failed at handshake to Peer {}\n\n'.format(self.host))
+            traceback.print_exc()
+            return
 
-        await self.send_interested(writer)
+        try:
+            await self.send_interested(writer)
+        except Exception as e:
+            print('Failed at sending interested to Peer {}\n\n'.format(self.host))
+            traceback.print_exc()
+            return
 
         buf = b''
         while True:
-            resp = await asyncio.wait_for(reader.read(16384), timeout=5)  # Suspends here if there's nothing to be read
+            try:
+                resp = await asyncio.wait_for(reader.read(16384), timeout=5)  # Suspends here if there's nothing to be read
+            except Exception as e:
+                print('Failed at Reading data from Peer {}\n\n'.format(self.host))
+                traceback.print_exc()
+                return
             # print('{} Read from peer: {}'.format(self, resp[:8]))
 
             buf += resp
@@ -109,7 +124,7 @@ class Peer():
 
             while True:
                 if len(buf) < 4:
-                    # print('Buffer is too short', len(buf))
+                    print('Buffer is too short', len(buf))
                     break
 
                 length = struct.unpack('>I', buf[0:4])[0]

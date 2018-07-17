@@ -134,6 +134,7 @@ class DownloadSession(object):
         else:
             # import pdb; pdb.set_trace()
             print('Piece {} hash is valid'.format(piece.index))
+            print('Piece {} DL'.format(piece.index))
 
         # Only runs when a piece is complete
         # Double braces because one set is for the tuple being sent
@@ -218,6 +219,7 @@ class DownloadSession(object):
 
             if have_pieces[piece.index]:
                 self.pieces_in_progress[piece.index] = piece
+                print("Piece {} PR".format(piece.index))
                 return piece
         # raise Exception('Not eligible for valid pieces')
 
