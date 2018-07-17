@@ -103,7 +103,6 @@ class DownloadSession(object):
 
     def on_block_received(self, piece_idx, begin, data):
         """
-        TODO: implement writing off downloaded piece
         1. Removes piece from self.pieces
         2. Verifies piece hash
         3. Sets self.have_pieces[piece.index] = True if hash is valid
@@ -197,7 +196,7 @@ class DownloadSession(object):
                 )
 
             this_piece = Piece(piece_idx, blocks, file_name, file_idx, outcome, fracture)
-            print(this_piece)
+            # print(this_piece)
             pieces.append(this_piece)
         return pieces
 
@@ -218,7 +217,7 @@ class DownloadSession(object):
             if have_pieces[piece.index]:
                 self.pieces_in_progress[piece.index] = piece
                 return piece
-        raise Exception('Not eligible for valid pieces')
+        # raise Exception('Not eligible for valid pieces')
 
     def __repr__(self):
         data = {
@@ -264,8 +263,8 @@ if __name__ == '__main__':
 
     loop = asyncio.get_event_loop()
     # For Debugging
-    loop.set_debug(True)
-    loop.slow_callback_duration = 0.001
-    warnings.simplefilter('always', ResourceWarning)
+    # loop.set_debug(True)
+    # loop.slow_callback_duration = 0.001
+    # warnings.simplefilter('always', ResourceWarning)
     loop.run_until_complete(download(sys.argv[1], './downloads', loop=loop))
     loop.close()
