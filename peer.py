@@ -20,7 +20,6 @@ class Peer():
         self.blocks = None
 
         self.inflight_requests = 0
-        self.get_bitfield()
 
     def handshake(self):
         return struct.pack(

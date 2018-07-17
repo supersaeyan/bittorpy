@@ -251,6 +251,8 @@ async def download(torrent_file : str, download_location : str, loop=None):
 
     peers = await (asyncio.gather(*[Peer(session, host, port) for host, port in peers_info]))
 
+    await (asyncio.gather(*[peer.get_bitfield() for peer in peers if peer.inflight_requests < 1 and peer.have_pieces != None]))
+
     alive_peers = await (asyncio.gather(*[peer for peer in peers if peer.inflight_requests < 1 and peer.have_pieces != None]))
 
     seen_peers.update([str(p) for p in alive_peers])
