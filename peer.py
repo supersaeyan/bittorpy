@@ -20,6 +20,7 @@ class Peer():
         self.blocks = None
 
         self.inflight_requests = 0
+        self.get_bitfield()
 
     def handshake(self):
         return struct.pack(
@@ -65,7 +66,7 @@ class Peer():
         while retries < 5:
             retries += 1
             try:
-                return await self._get_bitfield()
+                await self._get_bitfield()
             except Exception as e:
                 print('Error getting Bitfield: {}\n\n'.format(self.host))
                 self.inflight_requests -= 1
@@ -191,7 +192,8 @@ class Peer():
                 elif msg_id == 5:
                     bitfield = buf[5: 5 + length - 1]
                     self.have_pieces = bitstring.BitArray(bitfield)
-                    return (self.have_pieces, self.host, self.port)
+                    self.inflight_requests -= 1
+                    # return (self.have_pieces, self.host, self.port)
 
                 else:
                     print('unknown ID {}'.format(msg_id))

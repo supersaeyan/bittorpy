@@ -68,6 +68,7 @@ class Torrent:
         print("PIECE_LEN:", self._piece_length)
         print("NO. OF PIECES:", self.number_of_pieces)
         print("LAST PIECE LEN:", self._total_length % self._piece_length)
+        print("NO. OF PIECE HASHES", len(self._pieces)/20)
 
         self._name = self._metaData[b'info'][b'name']  # Usage depends on _mode
 

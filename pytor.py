@@ -248,16 +248,16 @@ async def download(torrent_file : str, download_location : str, loop=None):
     peers_info = torrent.peers  # ASYNCIFY THIS using await
 
     seen_peers = set()
-    peers = [
-        Peer(session, host, port)
-        for host, port in peers_info
-    ]
-    seen_peers.update([str(p) for p in peers])
+
+    peers = await (asyncio.gather(*[Peer(session, host, port) for host, port in peers_info]))
+
+    alive_peers = await (asyncio.gather(*[peer for peer in peers if peer.inflight_requests < 1 and peer.have_pieces != None]))
+
+    seen_peers.update([str(p) for p in alive_peers])
 
     print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
 
-    bit_fields = await (asyncio.gather(*[peer.get_bitfield() for peer in peers if peer.inflight_requests < 1 and peer.have_pieces != None]))
-    # alive_peers = [(bit_field, host, port) for bit_field, host, port in bit_fields if bit_field != None]
+    pieces_got = await (asyncio.gather(*[peer.download() for peer in peers if peer.inflight_requests < 1 and peer.have_pieces != None]))
 
     piece_ledger = bitstring.BitArray(
         bin='0' * torrent.number_of_pieces
