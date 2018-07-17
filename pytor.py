@@ -212,7 +212,7 @@ class DownloadSession(object):
 
             # Skip pieces we already have
             if is_piece_downloaded or is_piece_in_progress:
-                print('is piece downloaded LENGTH {}\nis piece progress LENGTH {}'.format(len(is_piece_downloaded), len(is_piece_in_progress)))
+                print('is piece downloaded {}\nis piece progress {}'.format(is_piece_downloaded, is_piece_in_progress))
                 continue
 
             if have_pieces[piece.index]:
