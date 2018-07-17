@@ -119,20 +119,18 @@ class DownloadSession(object):
             # print('Piece not complete')
             return
 
-        self.received_pieces[piece_idx] = piece
         piece_data = piece.data
 
         res_hash = hashlib.sha1(piece_data).digest()
         exp_hash = self.torrent.get_piece_hash(piece.index)
 
         if res_hash != exp_hash:
-            del self.received_pieces[piece_idx]  # Not received
             del self.pieces_in_progress[piece_idx]  # Not in progress anymore
             print('Hash check failed for Piece {}'.format(piece.index))
             piece.flush()
             return
         else:
-            del self.pieces_in_progress[piece_idx]  # Not in progress anymore
+            self.received_pieces[piece_idx] = piece
             print('Piece {} hash is valid'.format(piece.index))
             print('Piece {} DL'.format(piece.index))
 
@@ -214,7 +212,7 @@ class DownloadSession(object):
 
             # Skip pieces we already have
             if is_piece_downloaded or is_piece_in_progress:
-                print('IDX {} is piece downloaded {}\nis piece progress {}'.format(piece.index, is_piece_downloaded, is_piece_in_progress))
+                print('IDX {} is_piece_downloaded {}\nis_piece_in_progress {}'.format(piece.index, is_piece_downloaded, is_piece_in_progress))
                 continue
 
             if have_pieces[piece.index]:

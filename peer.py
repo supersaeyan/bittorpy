@@ -68,7 +68,7 @@ class Peer():
                 await self._download()
             except Exception as e:
                 print('Error downloading: {}\n\n'.format(self.host))
-                del self.session.pieces_in_progress[piece_idx]
+                # del self.session.pieces_in_progress[piece_idx]
                 self.inflight_requests -= 1
                 traceback.print_exc()
 
@@ -84,7 +84,7 @@ class Peer():
 
         except Exception as e:
             print('Failed to connect to Peer {}\n\n'.format(self.host, e))
-            del self.session.pieces_in_progress[piece_idx]
+            # del self.session.pieces_in_progress[piece_idx]
             self.inflight_requests -= 1
             traceback.print_exc()
             return
@@ -98,7 +98,7 @@ class Peer():
             handshake = await asyncio.wait_for(reader.read(68), timeout=5)  # Suspends here if there's nothing to be read
         except Exception as e:
             print('Failed at handshake to Peer {}\n\n'.format(self.host))
-            del self.session.pieces_in_progress[piece_idx]
+            # del self.session.pieces_in_progress[piece_idx]
             self.inflight_requests -= 1
             traceback.print_exc()
             return
@@ -107,7 +107,7 @@ class Peer():
             await self.send_interested(writer)
         except Exception as e:
             print('Failed at sending interested to Peer {}\n\n'.format(self.host))
-            del self.session.pieces_in_progress[piece_idx]
+            # del self.session.pieces_in_progress[piece_idx]
             self.inflight_requests -= 1
             traceback.print_exc()
             return
@@ -118,7 +118,7 @@ class Peer():
                 resp = await asyncio.wait_for(reader.read(16384), timeout=5)  # Suspends here if there's nothing to be read
             except Exception as e:
                 print('Failed at Reading data from Peer {}\n\n'.format(self.host))
-                del self.session.pieces_in_progress[piece_idx]
+                # del self.session.pieces_in_progress[piece_idx]
                 self.inflight_requests -= 1
                 traceback.print_exc()
                 return
