@@ -90,13 +90,13 @@ class Peer():
         writer.write(self.handshake())
         await writer.drain()
 
-        handshake = await reader.read(68)  # Suspends here if there's nothing to be read
+        handshake = await asyncio.wait_for(reader.read(68), timeout=5)  # Suspends here if there's nothing to be read
 
         await self.send_interested(writer)
 
         buf = b''
         while True:
-            resp = await reader.read(16384)  # Suspends here if there's nothing to be read
+            resp = await asyncio.wait_for(reader.read(16384), timeout=5)  # Suspends here if there's nothing to be read
             # print('{} Read from peer: {}'.format(self, resp[:8]))
 
             buf += resp
@@ -173,7 +173,7 @@ class Peer():
                     bitfield = buf[5: 5 + length - 1]
                     self.have_pieces = bitstring.BitArray(bitfield)
                     # print('[Message] Bitfield: {}'.format(bitfield))
-                    print('[Message] Bitfield: {}'.format(self.have_pieces))
+                    # print('[Message] Bitfield: {}'.format(self.have_pieces))
 
                     # buf = buf[5 + length - 1:]
                     buf = buf[4 + length:]
