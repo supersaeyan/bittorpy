@@ -34,6 +34,7 @@ class FileSaver(object):
                 os.lseek(self.fd, piece_abs_location, os.SEEK_SET)  # Piece index is the File index in case of single file
                 os.write(self.fd, piece_data)
                 piece_instance.flush()  # Remove from RAM after writing to disk
+                os.close(self.fd)
             else:
                 if not in_conflict:
                     self.file_name = os.path.join(self.file_path, file_name)  # File_name won't change so created beforehand 
@@ -41,6 +42,7 @@ class FileSaver(object):
                     os.lseek(self.fd, file_idx, os.SEEK_SET)  ####FIND FILE INDEX FOR THE PIECE IN ITS FILE####
                     os.write(self.fd, piece_data)
                     piece_instance.flush()  # Remove from RAM after writing to disk
+                    os.close(self.fd)
                 else:
                     print("Writing a fractured piece")
                     current_file, next_file = file_name.split('|')
@@ -51,8 +53,10 @@ class FileSaver(object):
                     self.fd = os.open(os.path.join(self.file_path, current_file), os.O_RDWR | os.O_CREAT)
                     os.lseek(self.fd, file_idx, os.SEEK_SET)  # Go to the File index for the piece
                     os.write(self.fd, piece_data[:(fracture-piece_abs_location)])  # Write first fragment of the piece from beg upto length of first fragment (fracture point - piece_abs_location)
+                    os.close(self.fd)
                     ####SECOND FRAGMENT####
                     self.fd = os.open(os.path.join(self.file_path, next_file), os.O_RDWR | os.O_CREAT)
                     os.lseek(self.fd, 0, os.SEEK_SET)  # Go to beginning of the next file
                     os.write(self.fd, piece_data[(fracture-piece_abs_location):])  # Write second fragment of the piece from fracture point to end
                     piece_instance.flush()  # Remove from RAM after writing to disk
+                    os.close(self.fd)
