@@ -126,13 +126,13 @@ class DownloadSession(object):
         exp_hash = self.torrent.get_piece_hash(piece.index)
 
         if res_hash != exp_hash:
-            # TODO: CHECK if it worked
-            del self.received_pieces[piece_idx]
+            del self.received_pieces[piece_idx]  # Not received
+            del self.pieces_in_progress[piece_idx]  # Not in progress anymore
             print('Hash check failed for Piece {}'.format(piece.index))
             piece.flush()
             return
         else:
-            # import pdb; pdb.set_trace()
+            del self.pieces_in_progress[piece_idx]  # Not in progress anymore
             print('Piece {} hash is valid'.format(piece.index))
             print('Piece {} DL'.format(piece.index))
 
