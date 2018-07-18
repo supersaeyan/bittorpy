@@ -252,34 +252,14 @@ async def download(torrent_file : str, download_location : str, loop=None):
     peers_info = torrent.peers  # ASYNCIFY THIS using await
 
     seen_peers = set()
-    peers = [
-        Peer(session, host, port)
-        for host, port in peers_info
-    ]
+    peers = [Peer(session, host, port) for host, port in peers_info]
     seen_peers.update([str(p) for p in peers])
 
     print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
 
-    done_pieces = 0
+    bitfields = await (asyncio.gather(*[peer.get_bitfield() for peer in peers if peer.inflight_requests < 1]))
+    pprint(bitfields)
 
-    while done_pieces < torrent.number_of_pieces:
-        print("STARTING")
-        await (asyncio.gather(*[peer.download() for peer in peers if peer.inflight_requests < 1]))
-
-        print("received", len(session.received_pieces))
-        pprint(session.received_pieces)
-
-        print("progress", len(session.pieces_in_progress))
-        pprint(session.pieces_in_progress)
-
-        print("alive peers")
-        peers = [peers for peer in peers if peers.have_pieces != None]
-
-        print("bitfields")
-        pprint([(peer, peer.have_pieces) for peer in peers])
-
-        done_pieces = len(session.received_pieces)
-        print("RESTARTING")
 
 if __name__ == '__main__':
     f = open('logfile', 'w')
