@@ -92,7 +92,7 @@ class DownloadSession(object):
         if self.torrent._mode == 'multiple':
             self.fractures = self.torrent.fractures
             print("DLSESSION", self.torrent._mode, self.fractures)
-            self.file_names = [os.path.join(*file[b'path']).decode() for file in self.torrent._files]  # Files list for popping in order, then processed path key to get final name
+            self.file_names = [os.path.join(*file[b'path']).decode() for file in self.torrent._files]  # Files list with processed path key to get final name
             # print(self.file_names)
         
         self.pieces : list = self.get_pieces()
@@ -257,8 +257,19 @@ async def download(torrent_file : str, download_location : str, loop=None):
 
     print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
 
-    bitfields = await (asyncio.gather(*[peer.get_bitfield() for peer in peers if peer.inflight_requests < 1]))
+    bitfields = await (asyncio.gather(*[(peer, peer.get_bitfield()) for peer in peers if not peer.being_used and peer.have_pieces != None]))
+    print("Bitfields:", len(bitfields))
     pprint(bitfields)
+
+    tasks = []
+    # SYNCHRONOUS STRATEGY
+    for i, piece in enumerate(session.pieces):
+        [tasks.append(peer.download(piece)) for peer, bitfield in bitfields if bitfield[i] and not peer.being_used]
+
+    await asyncio.gather(*tasks)
+
+    print("RECEIVED PIECES:", len(received_pieces))
+    pprint(session.received_pieces)
 
 
 if __name__ == '__main__':
@@ -267,9 +278,5 @@ if __name__ == '__main__':
     sys.stdout = Tee(sys.stdout, f)
 
     loop = asyncio.get_event_loop()
-    # For Debugging
-    # loop.set_debug(True)
-    # loop.slow_callback_duration = 0.001
-    # warnings.simplefilter('always', ResourceWarning)
     loop.run_until_complete(download(sys.argv[1], './downloads', loop=loop))
     loop.close()
