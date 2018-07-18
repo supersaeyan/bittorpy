@@ -257,15 +257,16 @@ async def download(torrent_file : str, download_location : str, loop=None):
 
     print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
 
-    bitfields = asyncio.gather(*[peer.get_bitfield() for peer in peers])
-    bitfields = [(peer, bitfield) for peer, bitfield in bitfields if bitfield != None]
+    bitfields = await (asyncio.gather(*[peer.get_bitfield() for peer in peers]))
     print("Bitfields:", len(bitfields))
     pprint(bitfields)
 
     tasks = []
     # SYNCHRONOUS STRATEGY
     for i, piece in enumerate(session.pieces):
-        [tasks.append(peer.download(piece)) for peer, bitfield in bitfields if bitfield[i] and not peer.being_used]
+        for peer, bitfield in bitfields:
+            if bitfield[i] and not peer.being_used:
+                tasks.append(loop.create_task(peer.download(piece)))
 
     await asyncio.gather(*tasks)
 
