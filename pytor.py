@@ -257,7 +257,7 @@ async def download(torrent_file : str, download_location : str, loop=None):
 
     print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
 
-    bitfields = await (asyncio.gather(*[(peer, peer.get_bitfield()) for peer in peers]))
+    bitfields = await (asyncio.gather(*[peer.get_bitfield() for peer in peers]))
     print("Bitfields:", len(bitfields))
     pprint(bitfields)
 
@@ -268,7 +268,7 @@ async def download(torrent_file : str, download_location : str, loop=None):
 
     # await asyncio.gather(*tasks)
 
-    print("RECEIVED PIECES:", len(received_pieces))
+    print("RECEIVED PIECES:", len(session.received_pieces))
     pprint(session.received_pieces)
 
 
