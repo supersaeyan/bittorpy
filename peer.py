@@ -193,7 +193,7 @@ class Peer():
                     self.have_pieces = bitstring.BitArray(bitfield)
                     buf = buf[4 + length:]
 
-                    return self.have_pieces
+                    return (self, self.have_pieces)
 
                 else:
                     print('unknown ID {}'.format(msg_id))
