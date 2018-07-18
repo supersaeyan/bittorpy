@@ -251,7 +251,7 @@ async def download(torrent_file : str, download_location : str, loop=None):
 
     # peers = [Peer(session, host, port) for host, port in peers_info]
 
-    alive_peers = await (asyncio.gather(*[peer.create(session, host, port) host, port in peers_info if not None]))
+    alive_peers = await (asyncio.gather(*[Peer.create(session, host, port) for host, port in peers_info if not None]))
 
     seen_peers.update([str(p) for p in alive_peers])
 
