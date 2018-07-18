@@ -21,6 +21,16 @@ class Peer():
 
         self.inflight_requests = 0
 
+    @classmethod
+    async def create(session, host, port):
+        try:
+            self = Peer(session, host, port)
+            await self.get_bitfield()
+            return self
+        except Exception as e:
+            traceback.print_exc()
+            return
+
     def handshake(self):
         return struct.pack(
             '>B19s8x20s20s',
