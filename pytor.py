@@ -265,9 +265,10 @@ async def download(torrent_file : str, download_location : str, loop=None):
     tasks = []
     # SYNCHRONOUS STRATEGY
     for i, piece in enumerate(session.pieces):
-        for bitfield in bitfields:
-            print(i, bitfield)
-            if bitfield != None:
+        for elem in bitfields:
+            if elem != None:
+                print(i, elem)
+                peer, bitfield = elem
                 if bitfield[i] and not peer.being_used:
                     tasks.append(loop.create_task(peer.download(piece)))
 
