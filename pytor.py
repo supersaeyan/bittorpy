@@ -92,7 +92,7 @@ class DownloadSession(object):
         if self.torrent._mode == 'multiple':
             self.fractures = self.torrent.fractures
             print("DLSESSION", self.torrent._mode, self.fractures)
-            self.file_names = [os.path.join(*file[b'path']).decode() for file in self.torrent._files]  # Files list with processed path key to get final name
+            self.file_names = [os.path.join(*file[b'path']).decode() for file in self.torrent._files]  # Files list for popping in order, then processed path key to get final name
             # print(self.file_names)
         
         self.pieces : list = self.get_pieces()
@@ -252,31 +252,34 @@ async def download(torrent_file : str, download_location : str, loop=None):
     peers_info = torrent.peers  # ASYNCIFY THIS using await
 
     seen_peers = set()
-    peers = [Peer(session, host, port) for host, port in peers_info]
+    peers = [
+        Peer(session, host, port)
+        for host, port in peers_info
+    ]
     seen_peers.update([str(p) for p in peers])
 
     print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
 
-    bitfields = await (asyncio.gather(*[peer.get_bitfield() for peer in peers]))
-    print("Bitfields:", len(bitfields), type(bitfields))
-    pprint(bitfields)
-    print("--------")
+    done_pieces = 0
 
-    tasks = []
-    # SYNCHRONOUS STRATEGY
-    for i, piece in enumerate(session.pieces):
-        for elem in bitfields:
-            if elem != None:
-                print(i, elem)
-                peer, bitfield = elem
-                if bitfield[i] and not peer.being_used:
-                    tasks.append(loop.create_task(peer.download(piece)))
+    while done_pieces < torrent.number_of_pieces:
+        print("STARTING")
+        await (asyncio.gather(*[peer.download() for peer in peers if peer.inflight_requests < 1]))
 
-    await asyncio.gather(*tasks)
+        print("received", len(session.received_pieces))
+        pprint(session.received_pieces)
 
-    print("RECEIVED PIECES:", len(session.received_pieces))
-    pprint(session.received_pieces)
+        print("progress", len(session.pieces_in_progress))
+        pprint(session.pieces_in_progress)
 
+        print("alive peers")
+        peers = [peers for peer in peers if peers.have_pieces != None]
+
+        print("bitfields")
+        pprint([(peer, peer.have_pieces) for peer in peers])
+
+        done_pieces = len(session.received_pieces)
+        print("RESTARTING")
 
 if __name__ == '__main__':
     f = open('logfile', 'w')
@@ -284,5 +287,9 @@ if __name__ == '__main__':
     sys.stdout = Tee(sys.stdout, f)
 
     loop = asyncio.get_event_loop()
+    # For Debugging
+    # loop.set_debug(True)
+    # loop.slow_callback_duration = 0.001
+    # warnings.simplefilter('always', ResourceWarning)
     loop.run_until_complete(download(sys.argv[1], './downloads', loop=loop))
     loop.close()

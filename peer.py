@@ -3,6 +3,7 @@ import struct
 from collections import defaultdict
 import traceback
 import bitstring
+# import socket
 
 
 class Peer():
@@ -15,8 +16,10 @@ class Peer():
         self.have_pieces = bitstring.BitArray(
             bin='0' * self.session.number_of_pieces
         )
-        self.being_used = False
+        self.piece_in_progress = None
         self.blocks = None
+
+        self.inflight_requests = 0
 
     def handshake(self):
         return struct.pack(
@@ -33,10 +36,11 @@ class Peer():
         writer.write(msg)
         await writer.drain()
 
-    def get_blocks_generator(self, piece):
+    def get_blocks_generator(self):
         def blocks():
             while True:
                 try:
+                    piece = self.session.get_piece_request(self.have_pieces)
                     print('[{}] Generating blocks for Piece: {}'.format(self, piece))
                     for block in piece.blocks:
                         yield block
@@ -47,173 +51,38 @@ class Peer():
             self.blocks = blocks()
         return self.blocks
 
-
-    async def request_a_piece(self, writer, piece):
-        """
-        Generate a block for the piece provided and request it from the peer
-        """
-        if self.being_used:
-            print("{} Peer busy, Not generating blocks".format(self.host))
-            return None
-        blocks_generator = self.get_blocks_generator(piece)
+    async def request_a_piece(self, writer):
+        if self.inflight_requests > 1:
+            return
+        blocks_generator = self.get_blocks_generator()
         block  = next(blocks_generator)
         if not block:
             print("No blocks generated")
-            return None
+            return
 
+        # print('[{}] Request Block: {}'.format(self, block))
         msg = struct.pack('>IbIII', 13, 6, block.piece, block.begin, block.length)
         writer.write(msg)
-        self.being_used = True
+        self.inflight_requests += 1
         await writer.drain()
 
-    async def get_bitfield(self):
+    async def download(self):
         retries = 0
         while retries < 5:
             retries += 1
             try:
-                res = await self._get_bitfield()
-                return res
-            except Exception as e:
-                print('Error getting bitfield: {}\n\n'.format(self.host))
-                self.being_used = False
-                traceback.print_exc()
-                return None
-
-    async def _get_bitfield(self):
-        try:
-            reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(self.host, self.port),
-                    timeout=10
-            )
-
-        except Exception as e:
-            print('Failed to connect to Peer {}\n\n'.format(self.host, e))
-            self.being_used = False
-            traceback.print_exc()
-            return
-
-        print('{} Sending handshake'.format(self))
-        writer.write(self.handshake())
-        await writer.drain()
-
-        try:
-            handshake = await asyncio.wait_for(reader.read(68), timeout=5)  # Suspends here if there's nothing to be read
-        except Exception as e:
-            print('Failed at handshake to Peer {}\n\n'.format(self.host))
-            self.being_used = False
-            traceback.print_exc()
-            return None
-
-        try:
-            await self.send_interested(writer)
-        except Exception as e:
-            print('Failed at sending interested to Peer {}\n\n'.format(self.host))
-            self.being_used = False
-            traceback.print_exc()
-            return None
-
-        buf = b''
-        while True:
-            try:
-                resp = await asyncio.wait_for(reader.read(16384), timeout=5)  # Suspends here if there's nothing to be read
-            except Exception as e:
-                print('Failed at Reading data from Peer {}\n\n'.format(self.host))
-                self.being_used = False
-                traceback.print_exc()
-                return None
-
-            buf += resp
-
-            if not buf and not resp:
-                print("NOT BUFFER AND NOT RESPONSE")
-                return None
-
-            while True:
-                if len(buf) < 4:
-                    print('Buffer is too short', len(buf))
-                    break
-
-                length = struct.unpack('>I', buf[0:4])[0]
-
-                if not len(buf) >= length:
-                    break
-
-                def consume(buf):
-                    buf = buf[4 + length:]
-                    return buf
-
-                def get_data(buf):
-                    return buf[:4 + length]
-
-
-                if length == 0:
-                    print('[Message] Keep Alive')
-                    buf = consume(buf)
-                    data = get_data(buf)
-                    continue
-
-                if len(buf) < 5:
-                    print('Buffer is less than 5... breaking')
-                    break
-
-                msg_id = struct.unpack('>b', buf[4:5])[0] # 5th byte is the ID
-
-                if msg_id == 0:
-                    print('[Message] CHOKE')
-                    data = get_data(buf)
-                    buf = consume(buf)
-
-                elif msg_id == 1:
-                    data = get_data(buf)
-                    buf = consume(buf)
-                    print('[Message] UNCHOKE')
-                    self.peer_choke = False
-
-                elif msg_id == 2:
-                    data = get_data(buf)
-                    buf = consume(buf)
-                    print('[Message] Interested')
-                    pass
-
-                elif msg_id == 3:
-                    data = get_data(buf)
-                    buf = consume(buf)
-                    print('[Message] Not Interested')
-                    pass
-
-                elif msg_id == 4:
-                    buf = buf[5:]
-                    data = get_data(buf)
-                    buf = consume(buf)
-                    print('[Message] Have')
-                    pass
-
-                elif msg_id == 5:
-                    bitfield = buf[5: 5 + length - 1]
-                    self.have_pieces = bitstring.BitArray(bitfield)
-                    buf = buf[4 + length:]
-
-                    return (self, self.have_pieces)
-
-                else:
-                    print('unknown ID {}'.format(msg_id))
-                    if msg_id == 159:
-                        exit(1)
-                    return None
-
-    async def download(self, piece):
-        retries = 0
-        while retries < 5:
-            retries += 1
-            try:
-                await self._download(piece)
+                await self._download()
             except Exception as e:
                 print('Error downloading: {}\n\n'.format(self.host))
-                self.being_used = False
+                # del self.session.pieces_in_progress[piece_idx]
+                self.inflight_requests -= 1
                 traceback.print_exc()
 
-    async def _download(self, piece):
+    async def _download(self):
         try:
+            # self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # self.__socket.connect((self.host, self.port))
+            # self.__socket.settimeout(10.0)
             reader, writer = await asyncio.wait_for(
                     asyncio.open_connection(self.host, self.port),
                     timeout=10
@@ -221,11 +90,13 @@ class Peer():
 
         except Exception as e:
             print('Failed to connect to Peer {}\n\n'.format(self.host, e))
-            self.being_used = False
+            # del self.session.pieces_in_progress[piece_idx]
+            self.inflight_requests -= 1
             traceback.print_exc()
             return
 
         print('{} Sending handshake'.format(self))
+        # self.__socket.send(self.handshake())
         writer.write(self.handshake())
         await writer.drain()
 
@@ -233,7 +104,8 @@ class Peer():
             handshake = await asyncio.wait_for(reader.read(68), timeout=5)  # Suspends here if there's nothing to be read
         except Exception as e:
             print('Failed at handshake to Peer {}\n\n'.format(self.host))
-            self.being_used = False
+            # del self.session.pieces_in_progress[piece_idx]
+            self.inflight_requests -= 1
             traceback.print_exc()
             return
 
@@ -241,7 +113,8 @@ class Peer():
             await self.send_interested(writer)
         except Exception as e:
             print('Failed at sending interested to Peer {}\n\n'.format(self.host))
-            self.being_used = False
+            # del self.session.pieces_in_progress[piece_idx]
+            self.inflight_requests -= 1
             traceback.print_exc()
             return
 
@@ -251,11 +124,15 @@ class Peer():
                 resp = await asyncio.wait_for(reader.read(16384), timeout=5)  # Suspends here if there's nothing to be read
             except Exception as e:
                 print('Failed at Reading data from Peer {}\n\n'.format(self.host))
-                self.being_used = False
+                # del self.session.pieces_in_progress[piece_idx]
+                self.inflight_requests -= 1
                 traceback.print_exc()
                 return
+            # print('{} Read from peer: {}'.format(self, resp[:8]))
 
             buf += resp
+
+            # print('Buffer len({}) is {}'.format(len(buf), buf[:8]))
 
             if not buf and not resp:
                 print("NOT BUFFER AND NOT RESPONSE")
@@ -283,6 +160,7 @@ class Peer():
                     print('[Message] Keep Alive')
                     buf = consume(buf)
                     data = get_data(buf)
+                    # print('[DATA]', data)
                     continue
 
                 if len(buf) < 5:
@@ -295,6 +173,7 @@ class Peer():
                     print('[Message] CHOKE')
                     data = get_data(buf)
                     buf = consume(buf)
+                    # print('[DATA]', data)
 
                 elif msg_id == 1:
                     data = get_data(buf)
@@ -324,36 +203,55 @@ class Peer():
                 elif msg_id == 5:
                     bitfield = buf[5: 5 + length - 1]
                     self.have_pieces = bitstring.BitArray(bitfield)
+                    # print('[Message] Bitfield: {}'.format(bitfield))
+                    # print('[Message] Bitfield: {}'.format(self.have_pieces))
+
+                    # buf = buf[5 + length - 1:]
                     buf = buf[4 + length:]
                     await self.send_interested(writer)
 
                 elif msg_id == 7:
+                    self.inflight_requests -= 1
                     data = get_data(buf)
                     buf = consume(buf)
 
                     l = struct.unpack('>I', data[:4])[0]
                     try:
-                        self.being_used = True
                         parts = struct.unpack('>IbII' + str(l - 9) + 's', data[:length + 4])
                         piece_idx, begin, data = parts[2], parts[3], parts[4]
                         self.session.on_block_received(piece_idx, begin, data)
                         print('Got piece idx {} - Block begin idx {}'.format(piece_idx, begin))
-                        self.being_used = False
                     except struct.error:
                         print('error decoding piece')
-                        self.being_used = False
                         return None
 
+                    # piece_index = buf[5]
+                    # piece_begin = buf[6]
+                    # block = buf[13: 13 + length]
+                    # # buf = buf[13 + length:]
+                    # buf = buf[4 + length:]
+                    # LOG.info('Buffer is reduced to {}'.format(buf))
+                    # LOG.info('Got piece idx {} begin {}'.format(piece_index, piece_begin))
+                    # LOG.info('Block has len {}'.format(len(block)))
+                    # LOG.info('Got this piece: {}'.format(block))
+
+                    # TODO: delegate to torrent session
+                    # with open(self.torrent_session.torrent.info[b'info'][b'name'].decode(), 'wb') as f:
+                    #     f.write(block)
+                    # continue
                 else:
                     print('unknown ID {}'.format(msg_id))
                     if msg_id == 159:
                         exit(1)
 
                 try:
-                    await self.request_a_piece(writer, piece)
+                    resp = await asyncio.wait_for(self.request_a_piece(writer), timeout=5)
+                    # if not resp:
+                        # return
                 except Exception as e:
                     print('{} Failed at requesting a piece\n\n'.format(self.host))
-                    self.being_used = False
+                    # del self.session.pieces_in_progress[piece_idx]
+                    self.inflight_requests -= 1
                     traceback.print_exc()
                     return
 
