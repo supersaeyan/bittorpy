@@ -263,15 +263,23 @@ async def download(torrent_file : str, download_location : str, loop=None):
     done_pieces = 0
 
     while done_pieces < torrent.number_of_pieces:
+        print("STARTING")
         await (asyncio.gather(*[peer.download() for peer in peers if peer.inflight_requests < 1]))
 
-        print(len(session.received_pieces))
-        pprint(session.download_blocks)
+        print("received", len(session.received_pieces))
+        pprint(session.received_pieces)
 
-        print(len(session.pieces_in_progress))
+        print("progress", len(session.pieces_in_progress))
         pprint(session.pieces_in_progress)
 
+        print("alive peers")
+        peers = [peers for peer in peers if peers.have_pieces != None]
+
+        print("bitfields")
+        pprint([(peer, peer.have_pieces) for peer in peers])
+
         done_pieces = len(session.received_pieces)
+        print("RESTARTING")
 
 if __name__ == '__main__':
     f = open('logfile', 'w')
