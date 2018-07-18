@@ -220,9 +220,10 @@ class DownloadSession(object):
                 self.pieces_in_progress[piece.index] = piece
                 print("Piece {} PR".format(piece.index))
                 return piece
+
         print("No pieces left")
-        print("Pieces in progress", [piece.index for piece in pieces_in_progress])
-        print(["Pieces downloaded", piece.index for piece in received_pieces])
+        print("Pieces in progress", ' '.join(sort([piece.index for piece in pieces_in_progress])))
+        print("Pieces downloaded", ' '.join(sort([piece.index for piece in received_pieces])))
         # raise Exception('Not eligible for valid pieces')
 
     def __repr__(self):

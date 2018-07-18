@@ -45,7 +45,8 @@ class Peer():
                     for block in piece.blocks:
                         yield block
                 except Exception as e:
-                    print("No piece returned".format(piece))
+                    print("No piece available from this peer")
+                    return
         if not self.blocks:
             self.blocks = blocks()
         return self.blocks
@@ -55,7 +56,9 @@ class Peer():
             return
         blocks_generator = self.get_blocks_generator()
         block  = next(blocks_generator)
-
+        if not block:
+            print("No blocks generated")
+            return
 
         # print('[{}] Request Block: {}'.format(self, block))
         msg = struct.pack('>IbIII', 13, 6, block.piece, block.begin, block.length)
