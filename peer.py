@@ -244,8 +244,16 @@ class Peer():
                     if msg_id == 159:
                         exit(1)
 
-                await self.request_a_piece(writer)
-
+                try:
+                    resp = await asyncio.wait_for(self.request_a_piece(writer), timeout=5)
+                    # if not resp:
+                        # return
+                except Exception as e:
+                    print('{} Failed at requesting a piece\n\n'.format(self.host))
+                    # del self.session.pieces_in_progress[piece_idx]
+                    self.inflight_requests -= 1
+                    traceback.print_exc()
+                    return
 
     def __repr__(self):
         return '[Peer {}:{}]'.format(self.host, self.port)
