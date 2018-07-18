@@ -39,10 +39,13 @@ class Peer():
     def get_blocks_generator(self):
         def blocks():
             while True:
-                piece = self.session.get_piece_request(self.have_pieces)
-                print('[{}] Generating blocks for Piece: {}'.format(self, piece))
-                for block in piece.blocks:
-                    yield block
+                try:
+                    piece = self.session.get_piece_request(self.have_pieces)
+                    print('[{}] Generating blocks for Piece: {}'.format(self, piece))
+                    for block in piece.blocks:
+                        yield block
+                except Exception as e:
+                    print("No piece returned".format(piece))
         if not self.blocks:
             self.blocks = blocks()
         return self.blocks
