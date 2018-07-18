@@ -4,7 +4,7 @@ import hashlib
 import math
 import sys
 from typing import Dict, List
-from pprint import pformat
+from pprint import pformat, pprint
 import os
 from file_saver import FileSaver
 from peer import Peer
@@ -96,7 +96,7 @@ class DownloadSession(object):
             # print(self.file_names)
         
         self.pieces : list = self.get_pieces()
-        self.pieces_in_progress : Dict[int, Piece] = {}  # NOT USED  ####TEST####
+        self.pieces_in_progress : Dict[int, Piece] = {}  ####TEST####
         self.received_pieces : Dict[int, Piece]= {}  ####TEST####
         self.received_pieces_queue : asyncio.Queue = writer
         self.info_hash = self.torrent._info_hash
@@ -260,8 +260,18 @@ async def download(torrent_file : str, download_location : str, loop=None):
 
     print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
 
-    await (asyncio.gather(*[peer.download() for peer in peers if peer.inflight_requests < 1]))
+    done_pieces = 0
 
+    while done_pieces < torrent.number_of_pieces:
+        await (asyncio.gather(*[peer.download() for peer in peers if peer.inflight_requests < 1]))
+
+        print(len(session.received_pieces))
+        pprint(session.download_blocks)
+
+        print(len(session.pieces_in_progress))
+        pprint(session.pieces_in_progress)
+
+        done_pieces = len(session.received_pieces)
 
 if __name__ == '__main__':
     f = open('logfile', 'w')
