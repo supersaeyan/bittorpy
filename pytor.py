@@ -4,7 +4,7 @@ import hashlib
 import math
 import sys
 from typing import Dict, List
-from pprint import pformat, pprint
+from pprint import pformat
 import os
 from file_saver import FileSaver
 from peer import Peer
@@ -248,23 +248,15 @@ async def download(torrent_file : str, download_location : str, loop=None):
     peers_info = torrent.peers  # ASYNCIFY THIS using await
 
     seen_peers = set()
-
-    # peers = [Peer(session, host, port) for host, port in peers_info]
-
-    alive_peers = await (asyncio.gather(*[Peer.create(session, host, port) for host, port in peers_info if not None]))
-
-    seen_peers.update([str(p) for p in alive_peers])
+    peers = [
+        Peer(session, host, port)
+        for host, port in peers_info
+    ]
+    seen_peers.update([str(p) for p in peers])
 
     print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
 
-    await (asyncio.gather(*[peer.download() for peer in alive_peers if peer.inflight_requests < 1 and peer.have_pieces != None]))
-
-    piece_ledger = bitstring.BitArray(
-        bin='0' * torrent.number_of_pieces
-    )
-
-
-    # pprint(pieces_got)
+    await (asyncio.gather(*[peer.download() for peer in peers if peer.inflight_requests < 1]))
 
 
 if __name__ == '__main__':
