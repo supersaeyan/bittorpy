@@ -71,7 +71,8 @@ class Peer():
         while retries < 5:
             retries += 1
             try:
-                return await self._get_bitfield()
+                res = await self._get_bitfield()
+                return res
             except Exception as e:
                 print('Error getting bitfield: {}\n\n'.format(self.host))
                 self.being_used = False
