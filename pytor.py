@@ -85,7 +85,6 @@ class Block(object):
 
 class DownloadSession(object):
     def __init__(self, torrent : Torrent, writer : asyncio.Queue = None):
-        # self.writer = writer
         self.torrent : Torrent = torrent
         self.piece_size : int = self.torrent._metaData[b'info'][b'piece length']
         self.number_of_pieces : int = self.torrent.number_of_pieces
@@ -93,23 +92,15 @@ class DownloadSession(object):
             self.fractures = self.torrent.fractures
             print("DLSESSION", self.torrent._mode, self.fractures)
             self.file_names = [os.path.join(*file[b'path']).decode() for file in self.torrent._files]  # Files list for popping in order, then processed path key to get final name
-            # print(self.file_names)
         
         self.pieces : list = self.get_pieces()
-        self.pieces_in_progress : Dict[int, Piece] = {}  ####TEST####
-        self.received_pieces : Dict[int, Piece]= {}  ####TEST####
+        self.pieces_in_progress : Dict[int, Piece] = {}
+        self.received_pieces : Dict[int, Piece]= {}
         self.received_pieces_queue : asyncio.Queue = writer
         self.info_hash = self.torrent._info_hash
 
 
     def on_block_received(self, piece_idx, begin, data):
-        """
-        1. Removes piece from self.pieces
-        2. Verifies piece hash
-        3. Sets self.have_pieces[piece.index] = True if hash is valid
-        4. Else re-inserts piece into self.pieces
-        :return:  None
-        """
 
         piece = self.pieces[piece_idx]
         piece.save_block(begin, data)
@@ -223,8 +214,8 @@ class DownloadSession(object):
                 return piece
 
         print("No pieces left")
-        print("Pieces in progress", ' '.join(sort([piece.index for piece in pieces_in_progress])))
-        print("Pieces downloaded", ' '.join(sort([piece.index for piece in received_pieces])))
+        # print("Pieces in progress", ' '.join(sort([piece.index for piece in pieces_in_progress])))
+        # print("Pieces downloaded", ' '.join(sort([piece.index for piece in received_pieces])))
         # raise Exception('Not eligible for valid pieces')
 
     def __repr__(self):

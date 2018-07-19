@@ -100,7 +100,7 @@ class Torrent:
 
         return parsed_files, total_length, fractures
 
-    def __get_peers(self):
+    def __get_peers(self, numwant = 100):
         self.peers = []
         numwant = 20
         peer_id = 'SA' + ''.join(
@@ -117,8 +117,8 @@ class Torrent:
             'compact': 1,
             'no_peer_id': 1,
             'event': 'started',
-            # 'numwant': numwant
-        }
+            'numwant': numwant
+            }
         for url in self._trackers:
             try:
                 print(url)

@@ -209,7 +209,7 @@ class Peer():
                         exit(1)
 
                 try:
-                    resp = await asyncio.wait_for(self.request_a_piece(writer), timeout=5)
+                    await self.request_a_piece(writer)
                 except Exception as e:
                     print('{} Failed at requesting a piece\n\n'.format(self.host))
                     self.inflight_requests -= 1
