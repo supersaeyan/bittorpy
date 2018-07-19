@@ -136,6 +136,7 @@ class DownloadSession(object):
 
         # Only runs when a piece is complete
         # Double braces because one set is for the tuple being sent
+        del self.pieces_in_progress[piece_idx]  # Not in progress anymore
         self.received_pieces_queue.put_nowait((piece.index * self.piece_size, piece.file_idx, piece_data, piece.in_conflict, piece.fracture_idx, piece.file_name, piece))
 
     def get_pieces(self) -> list:
@@ -210,10 +211,10 @@ class DownloadSession(object):
             is_piece_downloaded = piece.index in self.received_pieces
             is_piece_in_progress = piece.index in self.pieces_in_progress
 
-            # Skip pieces we already have
+            # Skip pieces we already have or are getting
             if is_piece_downloaded or is_piece_in_progress:
-                print('IDX {} is_piece_downloaded {}'.format(piece.index, is_piece_downloaded))
-                print('IDX {} is_piece_in_progress {}'.format(piece.index, is_piece_in_progress))
+                # print('IDX {} is_piece_downloaded {}'.format(piece.index, is_piece_downloaded))
+                # print('IDX {} is_piece_in_progress {}'.format(piece.index, is_piece_in_progress))
                 continue
 
             if have_pieces[piece.index]:
@@ -264,16 +265,18 @@ async def download(torrent_file : str, download_location : str, loop=None):
 
     while done_pieces < torrent.number_of_pieces:
         print("STARTING")
-        await (asyncio.gather(*[peer.download() for peer in peers if peer.inflight_requests < 1]))
+        await (asyncio.gather(*[peer.download() for peer in peers]))
 
         print("received", len(session.received_pieces))
-        pprint(session.received_pieces)
 
         print("progress", len(session.pieces_in_progress))
         pprint(session.pieces_in_progress)
 
+        print("resetting session.pieces_in_progress")
+        session.pieces_in_progress = {}
+
         print("alive peers")
-        peers = [peers for peer in peers if peers.have_pieces != None]
+        peers = [peer for peer in peers if peer.have_pieces != None]
 
         print("bitfields")
         pprint([(peer, peer.have_pieces) for peer in peers])
@@ -281,15 +284,12 @@ async def download(torrent_file : str, download_location : str, loop=None):
         done_pieces = len(session.received_pieces)
         print("RESTARTING")
 
+
 if __name__ == '__main__':
     f = open('logfile', 'w')
     backup = sys.stdout
     sys.stdout = Tee(sys.stdout, f)
 
     loop = asyncio.get_event_loop()
-    # For Debugging
-    # loop.set_debug(True)
-    # loop.slow_callback_duration = 0.001
-    # warnings.simplefilter('always', ResourceWarning)
     loop.run_until_complete(download(sys.argv[1], './downloads', loop=loop))
     loop.close()

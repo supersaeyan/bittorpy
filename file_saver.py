@@ -37,7 +37,6 @@ class FileSaver(object):
                 os.write(self.fd, piece_data)
                 piece_instance.flush()  # Remove from RAM after writing to disk
                 print("Piece {} WR".format(piece_instance.index))
-                # os.close(self.fd)
             else:
                 if not in_conflict:
                     self.file_name = os.path.join(self.file_path, file_name)  # File_name won't change so created beforehand 
