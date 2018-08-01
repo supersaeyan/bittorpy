@@ -30,9 +30,9 @@ class Peer():
     async def send_interested(self, writer):
         msg = struct.pack('>Ib', 1, 2)
         writer.write(msg)
-        print("Before draining writer in send interested for {}".format(self.host))
+        print("\nBefore draining writer in send interested for {}\n".format(self.host))
         await writer.drain()
-        print("After draining writer in send interested for {}".format(self.host))
+        print("\nAfter draining writer in send interested for {}\n".format(self.host))
 
     def get_blocks_generator(self):
         def blocks():
@@ -61,20 +61,20 @@ class Peer():
         msg = struct.pack('>IbIII', 13, 6, block.piece, block.begin, block.length)
         writer.write(msg)
         self.inflight_requests += 1
-        print("Before draining writer in request a piece for {}".format(self.host))
+        print("\nBefore draining writer in request a piece for {}\n".format(self.host))
         await writer.drain()
-        print("After draining writer in request a piece for {}".format(self.host))
+        print("\nAfter draining writer in request a piece for {}\n".format(self.host))
 
     async def download(self):
         retries = 0
         while retries < 5:
             retries += 1
             try:
-                print("Before awaiting self._download for {}".format(self.host))
-                await self._download()
-                print("After awaiting self._download for {}".format(self.host))
+                print("\nBefore awaiting self._download for {}\n".format(self.host))
+                await asyncio.wait_for(self._download(), timeout=30)
+                print("\nAfter awaiting self._download for {}\n".format(self.host))
             except Exception as e:
-                print('Error downloading: {}\n'.format(self.host))
+                print('\nError downloading: {}\n'.format(self.host))
                 self.inflight_requests -= 1
                 # traceback.print_exc()
 
@@ -86,21 +86,21 @@ class Peer():
             )
 
         except Exception as e:
-            print('Failed to connect to Peer {}\n'.format(self.host))
+            print('\nFailed to connect to Peer {}\n'.format(self.host))
             self.inflight_requests -= 1
             # traceback.print_exc()
             return
 
         print('{} Sending handshake'.format(self.host))
         writer.write(self.handshake())
-        print("Before draining writer for {}".format(self.host))
+        print("\nBefore draining writer for {}\n".format(self.host))
         await writer.drain()
-        print("After draining writer for {}".format(self.host))
+        print("\nAfter draining writer for {}\n".format(self.host))
 
         try:
             handshake = await asyncio.wait_for(reader.read(68), timeout=5)
         except Exception as e:
-            print('Failed at handshake to Peer {}\n'.format(self.host))
+            print('\nFailed at handshake to Peer {}\n'.format(self.host))
             self.inflight_requests -= 1
             # traceback.print_exc()
             return
@@ -108,7 +108,7 @@ class Peer():
         try:
             await self.send_interested(writer)
         except Exception as e:
-            print('Failed at sending interested to Peer {}\n'.format(self.host))
+            print('\nFailed at sending interested to Peer {}\n'.format(self.host))
             self.inflight_requests -= 1
             # traceback.print_exc()
             return
@@ -118,7 +118,7 @@ class Peer():
             try:
                 resp = await asyncio.wait_for(reader.read(16384), timeout=10)
             except Exception as e:
-                print('Failed at Reading data from Peer {}\n'.format(self.host))
+                print('\nFailed at Reading data from Peer {}\n'.format(self.host))
                 self.inflight_requests -= 1
                 # traceback.print_exc()
                 return
@@ -217,7 +217,7 @@ class Peer():
                 try:
                     await self.request_a_piece(writer)
                 except Exception as e:
-                    print('{} Failed at requesting a piece\n'.format(self.host))
+                    print('\n{} Failed at requesting a piece\n'.format(self.host))
                     self.inflight_requests -= 1
                     # traceback.print_exc()
                     return
