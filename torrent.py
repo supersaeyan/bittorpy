@@ -9,6 +9,7 @@ import socket
 import random
 import string
 from pybtracker import TrackerClient
+import asyncio
 
 
 class Torrent:
@@ -102,15 +103,15 @@ class Torrent:
 
     async def udp_tracker_client(self, url):
         client = TrackerClient(announce_uri=url)
-        await client.start()
-        peers = await client.announce(
+        await asyncio.wait_for(client.start(), timeout=10)
+        peers = await asyncio.wait_for(client.announce(
             b'01234567890123456789',  # infohash
             0,  # downloaded
             self._total_length,  # left
             0,  # uploaded
             0,  # event (0=none)
             120  # number of peers wanted
-        )
+        ), timeout=10)
         print("UDP TRACKER PEERS:", peers)
         return peers
 
