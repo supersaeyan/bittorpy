@@ -103,7 +103,7 @@ class Torrent:
     async def udp_tracker_client(self, url):
         client = TrackerClient(announce_uri=url)
         await client.start()
-        peers = client.announce(
+        peers = await client.announce(
             b'01234567890123456789',  # infohash
             0,  # downloaded
             self._total_length,  # left
@@ -156,9 +156,13 @@ class Torrent:
                         self.peers.append((ip, port))
                         start += 6
             else:
-                print(url)
-                udp_peers = await self.udp_tracker_client(url.decode())
-                self.peers.append(udp_peers)
+                try:
+                    print(url)
+                    udp_peers = await self.udp_tracker_client(url.decode())
+                    self.peers.append(udp_peers)
+                except Exception as e:
+                    print("Exception occurred for {}\n{}".format(url, e))
+                    continue
 
     def __str__(self):
         return pformat(self._metaData)
