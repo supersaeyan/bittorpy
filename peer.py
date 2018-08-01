@@ -53,7 +53,7 @@ class Peer():
         if self.inflight_requests > 1:
             return
         blocks_generator = self.get_blocks_generator()
-        block  = next(blocks_generator)
+        block = next(blocks_generator)
         if not block:
             print("No blocks generated")
             return
@@ -74,21 +74,21 @@ class Peer():
                 await self._download()
                 print("After awaiting self._download for {}".format(self.host))
             except Exception as e:
-                print('Error downloading: {}\n\n'.format(self.host))
+                print('Error downloading: {}\n'.format(self.host))
                 self.inflight_requests -= 1
-                traceback.print_exc()
+                # traceback.print_exc()
 
     async def _download(self):
         try:
             reader, writer = await asyncio.wait_for(
                     asyncio.open_connection(self.host, self.port),
-                    timeout=10
+                    timeout=5
             )
 
         except Exception as e:
-            print('Failed to connect to Peer {}\n\n'.format(self.host, e))
+            print('Failed to connect to Peer {}\n'.format(self.host))
             self.inflight_requests -= 1
-            traceback.print_exc()
+            # traceback.print_exc()
             return
 
         print('{} Sending handshake'.format(self.host))
@@ -98,29 +98,29 @@ class Peer():
         print("After draining writer for {}".format(self.host))
 
         try:
-            handshake = await asyncio.wait_for(reader.read(68), timeout=5)  # Suspends here if there's nothing to be read
+            handshake = await asyncio.wait_for(reader.read(68), timeout=5)
         except Exception as e:
-            print('Failed at handshake to Peer {}\n\n'.format(self.host))
+            print('Failed at handshake to Peer {}\n'.format(self.host))
             self.inflight_requests -= 1
-            traceback.print_exc()
+            # traceback.print_exc()
             return
 
         try:
             await self.send_interested(writer)
         except Exception as e:
-            print('Failed at sending interested to Peer {}\n\n'.format(self.host))
+            print('Failed at sending interested to Peer {}\n'.format(self.host))
             self.inflight_requests -= 1
-            traceback.print_exc()
+            # traceback.print_exc()
             return
 
         buf = b''
         while True:
             try:
-                resp = await asyncio.wait_for(reader.read(16384), timeout=60)
+                resp = await asyncio.wait_for(reader.read(16384), timeout=10)
             except Exception as e:
-                print('Failed at Reading data from Peer {}\n\n'.format(self.host))
+                print('Failed at Reading data from Peer {}\n'.format(self.host))
                 self.inflight_requests -= 1
-                traceback.print_exc()
+                # traceback.print_exc()
                 return
 
             buf += resp
@@ -217,9 +217,9 @@ class Peer():
                 try:
                     await self.request_a_piece(writer)
                 except Exception as e:
-                    print('{} Failed at requesting a piece\n\n'.format(self.host))
+                    print('{} Failed at requesting a piece\n'.format(self.host))
                     self.inflight_requests -= 1
-                    traceback.print_exc()
+                    # traceback.print_exc()
                     return
 
     def __repr__(self):

@@ -239,22 +239,21 @@ async def download(torrent_file : str, download_location : str, loop=None):
     torrent_writer = FileSaver(download_location, torrent)
     session = DownloadSession(torrent, torrent_writer.get_received_pieces_queue())  # FILESAVER
 
-    await torrent._get_peers()
-    peers_info = torrent.peers
-
-    seen_peers = set()
-    peers = [
-        Peer(session, host, port)
-        for host, port in peers_info
-    ]
-    seen_peers.update([str(p) for p in peers])
-
-    print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
-
     done_pieces = 0
 
     while done_pieces < torrent.number_of_pieces:
         print("STARTING")
+        await torrent._get_peers()
+        peers_info = torrent.peers
+
+        seen_peers = set()
+        peers = [
+            Peer(session, host, port)
+            for host, port in peers_info
+        ]
+        seen_peers.update([str(p) for p in peers])
+
+        print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
         await (asyncio.gather(*[peer.download() for peer in peers]))
 
         print("received", len(session.received_pieces))
