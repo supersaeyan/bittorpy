@@ -242,7 +242,6 @@ async def download(torrent_file : str, download_location : str, loop=None):
     done_pieces = 0
 
     while done_pieces < torrent.number_of_pieces:
-        print("STARTING")
         await torrent._get_peers()
         peers_info = torrent.peers
 
@@ -254,6 +253,7 @@ async def download(torrent_file : str, download_location : str, loop=None):
         seen_peers.update([str(p) for p in peers])
 
         print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
+        print("STARTING")
         await (asyncio.gather(*[peer.download() for peer in peers]))
 
         print("received", len(session.received_pieces))

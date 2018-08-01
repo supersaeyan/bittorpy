@@ -75,6 +75,7 @@ class Torrent:
 
         self._info_hash = sha1(bencoding.bencode(self._metaData[b'info'])).digest()
 
+        self.peers = []
         # await self._get_peers()
 
         # print(self.peers)
@@ -116,7 +117,6 @@ class Torrent:
         return peers
 
     async def _get_peers(self, numwant=100):
-        self.peers = []
         peer_id = 'SA' + ''.join(
             random.choice(string.ascii_lowercase + string.digits)
             for _ in range(18)
