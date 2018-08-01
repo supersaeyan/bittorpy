@@ -51,6 +51,7 @@ class Peer():
 
     async def request_a_piece(self, writer):
         if self.inflight_requests > 1:
+            print('ALERT!', self.inflight_requests)
             return
         blocks_generator = self.get_blocks_generator()
         block = next(blocks_generator)
@@ -144,7 +145,6 @@ class Peer():
                 def get_data(buf):
                     return buf[:4 + length]
 
-
                 if length == 0:
                     print('[Message] Keep Alive')
                     buf = consume(buf)
@@ -207,7 +207,7 @@ class Peer():
                         self.session.on_block_received(piece_idx, begin, data)
                     except struct.error:
                         print('error decoding piece')
-                        return None
+                        return
 
                 else:
                     print('unknown ID {}'.format(msg_id))
