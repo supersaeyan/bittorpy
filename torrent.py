@@ -1,14 +1,14 @@
 import math
 import bencoding
-from pprint import pprint, pformat
+from pprint import pformat
 import os
 from hashlib import sha1
 import requests
 import struct
 import socket
-import bitstring
 import random
 import string
+from pybtracker import TrackerClient
 
 
 class Torrent:
@@ -100,12 +100,25 @@ class Torrent:
 
         return parsed_files, total_length, fractures
 
-    def __get_peers(self, numwant = 100):
+    def udp_tracker_client(self, url):
+        client = TrackerClient(announce_uri=url)
+        client.start()
+        peers = client.announce(
+            b'01234567890123456789',  # infohash
+            0,  # downloaded
+            self._total_length,  # left
+            0,  # uploaded
+            0,  # event (0=none)
+            120  # number of peers wanted
+        )
+        print("UDP TRACKER PEERS:", peers)
+        return peers
+
+    def __get_peers(self, numwant=100):
         self.peers = []
-        numwant = 20
         peer_id = 'SA' + ''.join(
             random.choice(string.ascii_lowercase + string.digits)
-            for i in range(18)
+            for _ in range(18)
             )
         params = {
             'info_hash': self._info_hash,
@@ -120,28 +133,31 @@ class Torrent:
             'numwant': numwant
             }
         for url in self._trackers:
-            try:
-                print(url)
-                r = requests.get(url, params=params, timeout=10)
-            except Exception as e:
-                print("Exception occurred for {}\n{}".format(url, e))
-                continue
-            resp = bencoding.bdecode(r.content)
-            print(r.status_code, r.reason)
-            peers = resp[b'peers']
-            start = 0
+            if 'udp' not in url:
+                try:
+                    print(url)
+                    r = requests.get(url, params=params, timeout=10)
+                except Exception as e:
+                    print("Exception occurred for {}\n{}".format(url, e))
+                    continue
+                resp = bencoding.bdecode(r.content)
+                print(r.status_code, r.reason)
+                peers = resp[b'peers']
+                start = 0
 
-            if isinstance(peers, list):
-                self.peers = peers
-            elif len(peers) % 6 == 0:
-                while start < len(peers):
-                    ip = peers[start:start+4]
-                    ip = socket.inet_ntoa(ip)
-                    port = peers[start+4:start+6]
-                    port, = struct.unpack('!H', port)
-                    self.peers.append((ip, port))
-                    start += 6
+                if isinstance(peers, list):
+                    self.peers = peers
+                elif len(peers) % 6 == 0:
+                    while start < len(peers):
+                        ip = peers[start:start+4]
+                        ip = socket.inet_ntoa(ip)
+                        port = peers[start+4:start+6]
+                        port, = struct.unpack('!H', port)
+                        self.peers.append((ip, port))
+                        start += 6
+            else:
+                udp_peers = self.udp_tracker_client(url)
+                self.peers.append(udp_peers)
 
     def __str__(self):
         return pformat(self._metaData)
-
