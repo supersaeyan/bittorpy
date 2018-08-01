@@ -3,14 +3,12 @@ import bitstring
 import hashlib
 import math
 import sys
-from typing import Dict, List
+from typing import Dict
 from pprint import pformat, pprint
 import os
 from file_saver import FileSaver
 from peer import Peer
 from torrent import Torrent
-from pdb import set_trace as brkpt
-import warnings
 from tqdm import tqdm
 
 
@@ -98,7 +96,6 @@ class DownloadSession(object):
         self.received_pieces : Dict[int, Piece]= {}
         self.received_pieces_queue : asyncio.Queue = writer
         self.info_hash = self.torrent._info_hash
-
 
     def on_block_received(self, piece_idx, begin, data):
 
@@ -241,7 +238,7 @@ async def download(torrent_file : str, download_location : str, loop=None):
     torrent_writer = FileSaver(download_location, torrent)
     session = DownloadSession(torrent, torrent_writer.get_received_pieces_queue())  # FILESAVER
 
-    peers_info = torrent.peers  # ASYNCIFY THIS using await
+    peers_info = await torrent.peers  # ASYNCIFY THIS using await
 
     seen_peers = set()
     peers = [
@@ -267,7 +264,7 @@ async def download(torrent_file : str, download_location : str, loop=None):
         session.pieces_in_progress = {}
 
         print("alive peers")
-        peers = [peer for peer in peers if peer.have_pieces != None]
+        peers = [peer for peer in peers if peer.have_pieces is not None]
 
         print("bitfields")
         pprint([(peer, peer.have_pieces) for peer in peers])

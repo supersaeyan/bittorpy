@@ -100,9 +100,9 @@ class Torrent:
 
         return parsed_files, total_length, fractures
 
-    def udp_tracker_client(self, url):
+    async def udp_tracker_client(self, url):
         client = TrackerClient(announce_uri=url)
-        client.start()
+        await client.start()
         peers = client.announce(
             b'01234567890123456789',  # infohash
             0,  # downloaded
@@ -114,7 +114,7 @@ class Torrent:
         print("UDP TRACKER PEERS:", peers)
         return peers
 
-    def __get_peers(self, numwant=100):
+    async def __get_peers(self, numwant=100):
         self.peers = []
         peer_id = 'SA' + ''.join(
             random.choice(string.ascii_lowercase + string.digits)
@@ -133,7 +133,7 @@ class Torrent:
             'numwant': numwant
             }
         for url in self._trackers:
-            if 'udp' not in url:
+            if b'udp' not in url:
                 try:
                     print(url)
                     r = requests.get(url, params=params, timeout=10)
@@ -156,7 +156,8 @@ class Torrent:
                         self.peers.append((ip, port))
                         start += 6
             else:
-                udp_peers = self.udp_tracker_client(url)
+                print(url)
+                udp_peers = await self.udp_tracker_client(url.decode())
                 self.peers.append(udp_peers)
 
     def __str__(self):

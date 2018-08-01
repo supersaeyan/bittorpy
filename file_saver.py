@@ -55,7 +55,8 @@ class FileSaver(object):
                     ####FIRST FRAGMENT####
                     self.fd = os.open(os.path.join(self.file_path, current_file), os.O_RDWR | os.O_CREAT)
                     os.lseek(self.fd, file_idx, os.SEEK_SET)  # Go to the File index for the piece
-                    os.write(self.fd, piece_data[:(fracture-piece_abs_location)])  # Write first fragment of the piece from beg upto length of first fragment (fracture point - piece_abs_location)
+                    os.write(self.fd, piece_data[:(fracture-piece_abs_location)])
+                    # Write first fragment of the piece from beg upto length of first fragment (fracture point - piece_abs_location)
                     os.close(self.fd)
                     ####SECOND FRAGMENT####
                     self.fd = os.open(os.path.join(self.file_path, next_file), os.O_RDWR | os.O_CREAT)

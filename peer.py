@@ -1,9 +1,7 @@
 import asyncio
 import struct
-from collections import defaultdict
 import traceback
 import bitstring
-# import socket
 
 
 class Peer():
