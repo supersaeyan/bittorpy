@@ -105,7 +105,7 @@ class Torrent:
         client = TrackerClient(announce_uri=url)
         await asyncio.wait_for(client.start(), timeout=10)
         peers = await asyncio.wait_for(client.announce(
-            b'01234567890123456789',  # infohash
+            self._info_hash,  # infohash
             0,  # downloaded
             self._total_length,  # left
             0,  # uploaded
@@ -160,7 +160,7 @@ class Torrent:
                 try:
                     print(url)
                     udp_peers = await self.udp_tracker_client(url.decode())
-                    self.peers.append(udp_peers)
+                    self.peers.extend(udp_peers)
                 except Exception as e:
                     print("Exception occurred for {}\n{}".format(url, e))
                     continue
