@@ -74,9 +74,9 @@ class Torrent:
 
         self._info_hash = sha1(bencoding.bencode(self._metaData[b'info'])).digest()
 
-        self.__get_peers()
+        # await self._get_peers()
 
-        print(self.peers)
+        # print(self.peers)
 
     def get_piece_hash(self, piece_idx):
         return self._pieces[piece_idx*20: (piece_idx*20) + 20]
@@ -114,7 +114,7 @@ class Torrent:
         print("UDP TRACKER PEERS:", peers)
         return peers
 
-    async def __get_peers(self, numwant=100):
+    async def _get_peers(self, numwant=100):
         self.peers = []
         peer_id = 'SA' + ''.join(
             random.choice(string.ascii_lowercase + string.digits)

@@ -227,6 +227,7 @@ class DownloadSession(object):
 class Tee(object):
     def __init__(self, *files):
         self.files = files
+
     def write(self, obj):
         for f in self.files:
             f.write(obj)
@@ -238,7 +239,7 @@ async def download(torrent_file : str, download_location : str, loop=None):
     torrent_writer = FileSaver(download_location, torrent)
     session = DownloadSession(torrent, torrent_writer.get_received_pieces_queue())  # FILESAVER
 
-    peers_info = await torrent.peers  # ASYNCIFY THIS using await
+    peers_info = await torrent._get_peers()  # ASYNCIFY THIS using await
 
     seen_peers = set()
     peers = [
