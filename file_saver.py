@@ -23,7 +23,7 @@ class FileSaver(object):
 
     async def write(self):
         while True:
-            piece = await self.received_pieces_queue.get()
+            piece = await asyncio.wait_for(self.received_pieces_queue.get(), timeout=5)
             if not piece:
                 print("Poison pill. Exiting")
 

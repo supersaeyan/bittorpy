@@ -239,7 +239,8 @@ async def download(torrent_file : str, download_location : str, loop=None):
     torrent_writer = FileSaver(download_location, torrent)
     session = DownloadSession(torrent, torrent_writer.get_received_pieces_queue())  # FILESAVER
 
-    peers_info = await torrent._get_peers()  # ASYNCIFY THIS using await
+    await torrent._get_peers()
+    peers_info = torrent.peers
 
     seen_peers = set()
     peers = [
@@ -271,7 +272,10 @@ async def download(torrent_file : str, download_location : str, loop=None):
         pprint([(peer, peer.have_pieces) for peer in peers])
 
         done_pieces = len(session.received_pieces)
+        print("Done pieces:", done_pieces)
         print("RESTARTING")
+
+    return True
 
 
 if __name__ == '__main__':

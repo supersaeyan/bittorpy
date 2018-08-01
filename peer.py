@@ -30,7 +30,9 @@ class Peer():
     async def send_interested(self, writer):
         msg = struct.pack('>Ib', 1, 2)
         writer.write(msg)
+        print("Before draining writer in send interested for {}".format(self.host))
         await writer.drain()
+        print("After draining writer in send interested for {}".format(self.host))
 
     def get_blocks_generator(self):
         def blocks():
@@ -59,14 +61,18 @@ class Peer():
         msg = struct.pack('>IbIII', 13, 6, block.piece, block.begin, block.length)
         writer.write(msg)
         self.inflight_requests += 1
+        print("Before draining writer in request a piece for {}".format(self.host))
         await writer.drain()
+        print("After draining writer in request a piece for {}".format(self.host))
 
     async def download(self):
         retries = 0
         while retries < 5:
             retries += 1
             try:
+                print("Before awaiting self._download for {}".format(self.host))
                 await self._download()
+                print("After awaiting self._download for {}".format(self.host))
             except Exception as e:
                 print('Error downloading: {}\n\n'.format(self.host))
                 self.inflight_requests -= 1
@@ -85,9 +91,11 @@ class Peer():
             traceback.print_exc()
             return
 
-        print('{} Sending handshake'.format(self))
+        print('{} Sending handshake'.format(self.host))
         writer.write(self.handshake())
+        print("Before draining writer for {}".format(self.host))
         await writer.drain()
+        print("After draining writer for {}".format(self.host))
 
         try:
             handshake = await asyncio.wait_for(reader.read(68), timeout=5)  # Suspends here if there's nothing to be read
@@ -108,7 +116,7 @@ class Peer():
         buf = b''
         while True:
             try:
-                resp = await asyncio.wait_for(reader.read(16384), timeout=5)  # Suspends here if there's nothing to be read
+                resp = await asyncio.wait_for(reader.read(16384), timeout=60)
             except Exception as e:
                 print('Failed at Reading data from Peer {}\n\n'.format(self.host))
                 self.inflight_requests -= 1
