@@ -212,7 +212,10 @@ class Peer():
                 else:
                     print('unknown ID {}'.format(msg_id))
                     if msg_id == 159:
+                        self.inflight_requests -= 1
                         exit(1)
+                    self.inflight_requests -= 1
+                    return
 
                 try:
                     await self.request_a_piece(writer)
