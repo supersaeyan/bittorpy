@@ -30,9 +30,9 @@ class Peer():
     async def send_interested(self, writer):
         msg = struct.pack('>Ib', 1, 2)
         writer.write(msg)
-        print("\nBefore draining writer in send interested for {}\n".format(self.host))
+        # print("\nBefore draining writer in send interested for {}\n".format(self.host))
         await writer.drain()
-        print("\nAfter draining writer in send interested for {}\n".format(self.host))
+        # print("\nAfter draining writer in send interested for {}\n".format(self.host))
 
     def get_blocks_generator(self):
         def blocks():
@@ -62,18 +62,18 @@ class Peer():
         msg = struct.pack('>IbIII', 13, 6, block.piece, block.begin, block.length)
         writer.write(msg)
         self.inflight_requests += 1
-        print("\nBefore draining writer in request a piece for {}\n".format(self.host))
+        # print("\nBefore draining writer in request a piece for {}\n".format(self.host))
         await writer.drain()
-        print("\nAfter draining writer in request a piece for {}\n".format(self.host))
+        # print("\nAfter draining writer in request a piece for {}\n".format(self.host))
 
     async def download(self):
         retries = 0
         while retries < 5:
             retries += 1
             try:
-                print("\nBefore awaiting self._download for {}\n".format(self.host))
+                # print("\nBefore awaiting self._download for {}\n".format(self.host))
                 await asyncio.wait_for(self._download(), timeout=30)
-                print("\nAfter awaiting self._download for {}\n".format(self.host))
+                # print("\nAfter awaiting self._download for {}\n".format(self.host))
             except Exception as e:
                 print('\nError downloading: {}\n'.format(self.host))
                 self.inflight_requests -= 1
@@ -94,9 +94,9 @@ class Peer():
 
         print('{} Sending handshake'.format(self.host))
         writer.write(self.handshake())
-        print("\nBefore draining writer for {}\n".format(self.host))
+        # print("\nBefore draining writer for {}\n".format(self.host))
         await writer.drain()
-        print("\nAfter draining writer for {}\n".format(self.host))
+        # print("\nAfter draining writer for {}\n".format(self.host))
 
         try:
             handshake = await asyncio.wait_for(reader.read(68), timeout=5)
@@ -211,10 +211,9 @@ class Peer():
 
                 else:
                     print('unknown ID {}'.format(msg_id))
-                    if msg_id == 159:
-                        self.inflight_requests -= 1
-                        exit(1)
                     self.inflight_requests -= 1
+                    if msg_id == 159:
+                        exit(1)
                     return
 
                 try:

@@ -243,7 +243,7 @@ async def download(torrent_file : str, download_location : str, loop=None):
 
     while done_pieces < torrent.number_of_pieces:
         await torrent._get_peers()
-        peers_info = torrent.peers
+        peers_info = list(set(torrent.peers))
 
         seen_peers = set()
         peers = [
