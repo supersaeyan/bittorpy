@@ -253,6 +253,9 @@ async def download(torrent_file : str, download_location : str, loop=None):
         seen_peers.update([str(p) for p in peers])
 
         print('[Peers]: {} {}'.format(len(seen_peers), seen_peers))
+        for peer in peers:
+            peer.inflight_requests = 0
+
         print("STARTING")
         await (asyncio.gather(*[peer.download() for peer in peers]))
 
