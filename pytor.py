@@ -1,27 +1,29 @@
 import asyncio
-import bitstring
 import hashlib
 import math
-import sys
-from typing import Dict
-from pprint import pformat, pprint
 import os
+import sys
+from pprint import pformat, pprint
+from typing import Dict
+
+import bitstring
+from tqdm import tqdm
+
 from file_saver import FileSaver
 from peer import Peer
 from torrent import Torrent
-from tqdm import tqdm
 
 
 class Piece(object):
-    def __init__(self, index : int, blocks : list, file_name : str, file_idx : int, in_conflict : bool, fracture_idx : int):
-        self.index : int = index
-        self.blocks : list = blocks
-        self.downloaded_blocks : bitstring.BitArray = \
-            bitstring.BitArray(bin='0'*len(blocks))
-        self.in_conflict : bool = in_conflict
-        self.fracture_idx : int = fracture_idx
-        self.file_name : str = file_name
-        self.file_idx : int = file_idx
+    def __init__(self, index: int, blocks: list, file_name: str, file_idx: int, in_conflict: bool, fracture_idx: int):
+        self.index: int = index
+        self.blocks: list = blocks
+        self.downloaded_blocks: bitstring.BitArray = \
+            bitstring.BitArray(bin='0' * len(blocks))
+        self.in_conflict: bool = in_conflict
+        self.fracture_idx: int = fracture_idx
+        self.file_name: str = file_name
+        self.file_idx: int = file_idx
 
     def flush(self):
         [block.flush() for block in self.blocks]
@@ -32,7 +34,7 @@ class Piece(object):
         """
         return all(self.downloaded_blocks)
 
-    def save_block(self, begin : int, data : bytes):
+    def save_block(self, begin: int, data: bytes):
         """
         Writes block 'data' into block object
         """
@@ -82,19 +84,20 @@ class Block(object):
 
 
 class DownloadSession(object):
-    def __init__(self, torrent : Torrent, writer : asyncio.Queue = None):
-        self.torrent : Torrent = torrent
-        self.piece_size : int = self.torrent._metaData[b'info'][b'piece length']
-        self.number_of_pieces : int = self.torrent.number_of_pieces
+    def __init__(self, torrent: Torrent, writer: asyncio.Queue = None):
+        self.torrent: Torrent = torrent
+        self.piece_size: int = self.torrent._metaData[b'info'][b'piece length']
+        self.number_of_pieces: int = self.torrent.number_of_pieces
         if self.torrent._mode == 'multiple':
             self.fractures = self.torrent.fractures
             print("DLSESSION", self.torrent._mode, self.fractures)
-            self.file_names = [os.path.join(*file[b'path']).decode() for file in self.torrent._files]  # Files list for popping in order, then processed path key to get final name
-        
-        self.pieces : list = self.get_pieces()
-        self.pieces_in_progress : Dict[int, Piece] = {}
-        self.received_pieces : Dict[int, Piece]= {}
-        self.received_pieces_queue : asyncio.Queue = writer
+            self.file_names = [os.path.join(*file[b'path']).decode() for file in
+                               self.torrent._files]  # Files list for popping in order, then processed path key to get final name
+
+        self.pieces: list = self.get_pieces()
+        self.pieces_in_progress: Dict[int, Piece] = {}
+        self.received_pieces: Dict[int, Piece] = {}
+        self.received_pieces_queue: asyncio.Queue = writer
         self.info_hash = self.torrent._info_hash
 
     def on_block_received(self, piece_idx, begin, data):
@@ -125,15 +128,16 @@ class DownloadSession(object):
         # Only runs when a piece is complete
         # Double braces because one set is for the tuple being sent
         del self.pieces_in_progress[piece_idx]  # Not in progress anymore
-        self.received_pieces_queue.put_nowait((piece.index * self.piece_size, piece.file_idx, piece_data, piece.in_conflict, piece.fracture_idx, piece.file_name, piece))
+        self.received_pieces_queue.put_nowait((piece.index * self.piece_size, piece.file_idx, piece_data,
+                                               piece.in_conflict, piece.fracture_idx, piece.file_name, piece))
 
     def get_pieces(self) -> list:
         """
         Generates list of pieces and their blocks
         """
 
-        ####FILE_ITER is the file's number####
-        ####FILE_IDX is the piece's index inside its file####
+        # FILE_ITER is the file's number
+        # FILE_IDX is the piece's index inside its file
         pieces = []
         blocks_per_piece = math.ceil(self.piece_size / 16384)
         file_idx = 0
@@ -154,7 +158,8 @@ class DownloadSession(object):
                             # Piece ends after fracture point and also starts before fracture point, therefore the piece is in conflict
                             print('Fracture found in piece {} at {}'.format(piece_idx, fracture))
                             outcome = True
-                            file_name = self.file_names[file_iter] + '|' + self.file_names[file_iter + 1]  # Assigning file names for both files, existing in the piece in conflict, concatenated with a '|' pipe
+                            file_name = self.file_names[file_iter] + '|' + self.file_names[
+                                file_iter + 1]  # Assigning file names for both files, existing in the piece in conflict, concatenated with a '|' pipe
                             fracture = self.fractures[file_iter]
                             file_iter += 1
                         else:
@@ -233,7 +238,7 @@ class Tee(object):
             f.write(obj)
 
 
-async def download(torrent_file : str, download_location : str, loop=None):
+async def download(torrent_file: str, download_location: str, loop=None):
     torrent = Torrent(torrent_file)
 
     torrent_writer = FileSaver(download_location, torrent)

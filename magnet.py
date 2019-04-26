@@ -33,13 +33,15 @@ class Magnet:
 
         self._piece_length = ''
 
-
-
-    def _parse(self, url):
+    @staticmethod
+    def _parse(url):
         params = [tuple(elem.split('=')) for elem in url.replace('magnet:?', '').split('&')]
         pprint(params)
         return params
 
-url = "magnet:?xt=urn:ed2k:31D6CFE0D16AE931B73C59D7E0C089C0&xl=0&dn=zero_len.fil&xt=urn:bitprint:3I42H3S6NNFQ2MSVX7XZKYAYSCX5QBYJ.LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ&xt=urn:md5:D41D8CD98F00B204E9800998ECF8427E"
 
-m = Magnet(url)
+if __name__ == '__main__':
+    url = "magnet:?xt=urn:ed2k:31D6CFE0D16AE931B73C59D7E0C089C0&xl=0&dn=zero_len.fil&xt=urn:bitprint:3I42H3S6NNFQ2M" \
+          "SVX7XZKYAYSCX5QBYJ.LWPNACQDBZRYXW3VHJVCJ64QBZNGHOHHHZWCLNQ&xt=urn:md5:D41D8CD98F00B204E9800998ECF8427E"
+
+    m = Magnet(url)

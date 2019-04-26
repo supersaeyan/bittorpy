@@ -1,15 +1,16 @@
-import math
-import bencoding
-from pprint import pformat
-import os
-from hashlib import sha1
-import requests
-import struct
-import socket
-import random
-import string
-from pybtracker import TrackerClient
 import asyncio
+import math
+import os
+import random
+import socket
+import string
+import struct
+from hashlib import sha1
+from pprint import pformat
+
+import bencoding
+import requests
+from pybtracker import TrackerClient
 
 
 class Torrent:

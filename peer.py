@@ -1,10 +1,10 @@
 import asyncio
 import struct
-import traceback
+
 import bitstring
 
 
-class Peer():
+class Peer:
     def __init__(self, session, host, port):
         self.host = host
         self.port = port
@@ -42,9 +42,10 @@ class Peer():
                     print('[{}] Generating blocks for Piece: {}'.format(self, piece))
                     for block in piece.blocks:
                         yield block
-                except Exception as e:
+                except Exception:
                     print("No piece available from this peer")
                     return
+
         if not self.blocks:
             self.blocks = blocks()
         return self.blocks
@@ -82,8 +83,8 @@ class Peer():
     async def _download(self):
         try:
             reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(self.host, self.port),
-                    timeout=5
+                asyncio.open_connection(self.host, self.port),
+                timeout=5
             )
 
         except Exception as e:
@@ -156,7 +157,7 @@ class Peer():
                     # print('Buffer is less than 5... breaking')
                     break
 
-                msg_id = struct.unpack('>b', buf[4:5])[0] # 5th byte is the ID
+                msg_id = struct.unpack('>b', buf[4:5])[0]  # 5th byte is the ID
 
                 if msg_id == 0:
                     print('[Message] CHOKE')
