@@ -34,8 +34,8 @@ class Magnet:
         self._piece_length = ''
 
     @staticmethod
-    def _parse(url):
-        params = [tuple(elem.split('=')) for elem in url.replace('magnet:?', '').split('&')]
+    def _parse(magnet_url):
+        params = [tuple(elem.split('=')) for elem in magnet_url.replace('magnet:?', '').split('&')]
         pprint(params)
         return params
 

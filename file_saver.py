@@ -5,8 +5,9 @@ import os
 class FileSaver(object):
     def __init__(self, outdir, torrent):
         self.torrent = torrent
-        self.file_path = os.path.join(outdir, torrent._name.decode())
-        if self.torrent._mode == 'multiple':
+        self.file_path = os.path.join(outdir, torrent.name.decode())
+        self.file_name = ""
+        if self.torrent.mode == 'multiple':
             if not os.path.isdir(self.file_path):
                 print("Creating dir", self.file_path)
                 os.mkdir(self.file_path)
@@ -37,16 +38,16 @@ class FileSaver(object):
                 file_idx))  # Don't print piece_data for the sake of readability
 
             # HANDLE THE SINGLE FILE CASE SEPARATELY FROM NON CONFLICT
-            if self.torrent._mode == 'single':
-                os.lseek(self.fd, piece_abs_location,
-                         os.SEEK_SET)  # Piece index is the File index in case of single file
+            if self.torrent.mode == 'single':
+                os.lseek(self.fd, piece_abs_location, os.SEEK_SET)
+                # Piece index is the File index in case of single file
                 os.write(self.fd, piece_data)
                 piece_instance.flush()  # Remove from RAM after writing to disk
                 print("Piece {} WR".format(piece_instance.index))
             else:
                 if not in_conflict:
-                    self.file_name = os.path.join(self.file_path,
-                                                  file_name)  # File_name won't change so created beforehand
+                    self.file_name = os.path.join(self.file_path, file_name)
+                    # File_name won't change so created beforehand
                     self.fd = os.open(self.file_name, os.O_RDWR | os.O_CREAT)
                     os.lseek(self.fd, file_idx, os.SEEK_SET)  # FIND FILE INDEX FOR THE PIECE IN ITS FILE
                     os.write(self.fd, piece_data)

@@ -17,64 +17,64 @@ class Torrent:
     def __init__(self, file_path):
         if os.path.isfile(file_path) and file_path.split('.')[-1] == 'torrent':
             with open(file_path, 'rb') as f:
-                self._metaData = bencoding.bdecode(f.read())
+                self.metaData = bencoding.bdecode(f.read())
         else:
             raise ValueError('Invalid torrent file')
 
-        self._announce = self._metaData[b'announce']
+        self._announce = self.metaData[b'announce']
 
-        if b'private' in self._metaData[b'info']:
-            self._isPrivate = True if int(self._metaData[b'info'][b'private']) == 1 else False
+        if b'private' in self.metaData[b'info']:
+            self._isPrivate = True if int(self.metaData[b'info'][b'private']) == 1 else False
         else:
             self._isPrivate = False
 
-        self._pieces = self._metaData[b'info'][b'pieces']
+        self._pieces = self.metaData[b'info'][b'pieces']
 
-        self._piece_length = self._metaData[b'info'][b'piece length']
+        self._piece_length = self.metaData[b'info'][b'piece length']
 
-        if b'announce-list' not in self._metaData:
+        if b'announce-list' not in self.metaData:
             self._trackers = [self._announce]
         else:
-            self._trackers = self._metaData[b'announce-list']
+            self._trackers = self.metaData[b'announce-list']
             self._trackers = [tracker for sublist in self._trackers for tracker in sublist if b'ipv6' not in tracker]
 
-        if b'creation date' in self._metaData:
-            self._creationDate = self._metaData[b'creation date']
+        if b'creation date' in self.metaData:
+            self._creationDate = self.metaData[b'creation date']
 
-        if b'comment' in self._metaData:
-            self._comment = self._metaData[b'comment']
+        if b'comment' in self.metaData:
+            self._comment = self.metaData[b'comment']
 
-        if b'created by' in self._metaData:
-            self._createdBy = self._metaData[b'created by']
+        if b'created by' in self.metaData:
+            self._createdBy = self.metaData[b'created by']
 
-        if b'encoding' in self._metaData:
-            self._encoding = self._metaData[b'encoding']
+        if b'encoding' in self.metaData:
+            self._encoding = self.metaData[b'encoding']
 
-        if b'files' not in self._metaData[b'info']:
-            self._mode = 'single'
-            self._total_length = self._metaData[b'info'][b'length']
-            if b'md5sum' in self._metaData:
-                self._md5sum = self._metaData[b'info'][b'md5sum']
+        if b'files' not in self.metaData[b'info']:
+            self.mode = 'single'
+            self._total_length = self.metaData[b'info'][b'length']
+            if b'md5sum' in self.metaData:
+                self._md5sum = self.metaData[b'info'][b'md5sum']
         else:
-            self._mode = 'multiple'
-            self._files = self._metaData[b'info'][b'files']
+            self.mode = 'multiple'
+            self.files = self.metaData[b'info'][b'files']
             # Man Made stuff here onwards
 
             # self.Fractures stores File finish indexes
-            self._files, self._total_length, self.fractures = self.__parse_files()
+            self.files, self._total_length, self.fractures = self.__parse_files()
 
         self.number_of_pieces = math.ceil(self._total_length / self._piece_length)
 
-        print("MODE:", self._mode)
+        print("MODE:", self.mode)
         print("TOTAL LENGTH:", self._total_length)
         print("PIECE_LEN:", self._piece_length)
         print("NO. OF PIECES:", self.number_of_pieces)
         print("LAST PIECE LEN:", self._total_length % self._piece_length)
         print("NO. OF PIECE HASHES", len(self._pieces)/20)
 
-        self._name = self._metaData[b'info'][b'name']  # Usage depends on _mode
+        self.name = self.metaData[b'info'][b'name']  # Usage depends on mode
 
-        self._info_hash = sha1(bencoding.bencode(self._metaData[b'info'])).digest()
+        self.info_hash = sha1(bencoding.bencode(self.metaData[b'info'])).digest()
 
         self.peers = []
         # await self._get_peers()
@@ -88,7 +88,7 @@ class Torrent:
         parsed_files = []
         fractures = []
         total_length = 0
-        for file in self._files:
+        for file in self.files:
             file_length = file[b'length']
             file_path = file[b'path']
             if b'md5sum' in file:
@@ -107,7 +107,7 @@ class Torrent:
         client = TrackerClient(announce_uri=url)
         await asyncio.wait_for(client.start(), timeout=10)
         peers = await asyncio.wait_for(client.announce(
-            self._info_hash,  # infohash
+            self.info_hash,  # infohash
             0,  # downloaded
             self._total_length,  # left
             0,  # uploaded
@@ -117,13 +117,13 @@ class Torrent:
         print("UDP TRACKER PEERS:", peers)
         return peers
 
-    async def _get_peers(self, numwant=100):
+    async def get_peers(self, numwant=100):
         peer_id = 'SA' + ''.join(
             random.choice(string.ascii_lowercase + string.digits)
             for _ in range(18)
             )
         params = {
-            'info_hash': self._info_hash,
+            'info_hash': self.info_hash,
             'peer_id': peer_id,
             'port': 6881,
             'uploaded': 0,
@@ -167,4 +167,4 @@ class Torrent:
                     continue
 
     def __str__(self):
-        return pformat(self._metaData)
+        return pformat(self.metaData)

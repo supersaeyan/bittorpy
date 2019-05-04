@@ -27,7 +27,8 @@ class Peer:
             "a1b2c3d4e5f6g7h8i9j0".encode()
         )
 
-    async def send_interested(self, writer):
+    @staticmethod
+    async def send_interested(writer):
         msg = struct.pack('>Ib', 1, 2)
         writer.write(msg)
         # print("\nBefore draining writer in send interested for {}\n".format(self.host))
@@ -75,7 +76,7 @@ class Peer:
                 # print("\nBefore awaiting self._download for {}\n".format(self.host))
                 await asyncio.wait_for(self._download(), timeout=30)
                 # print("\nAfter awaiting self._download for {}\n".format(self.host))
-            except Exception as e:
+            except Exception:
                 print('\nError downloading: {}\n'.format(self.host))
                 self.inflight_requests -= 1
                 # traceback.print_exc()
@@ -87,7 +88,7 @@ class Peer:
                 timeout=5
             )
 
-        except Exception as e:
+        except Exception:
             print('\nFailed to connect to Peer {}\n'.format(self.host))
             self.inflight_requests -= 1
             # traceback.print_exc()
@@ -101,7 +102,7 @@ class Peer:
 
         try:
             handshake = await asyncio.wait_for(reader.read(68), timeout=5)
-        except Exception as e:
+        except Exception:
             print('\nFailed at handshake to Peer {}\n'.format(self.host))
             self.inflight_requests -= 1
             # traceback.print_exc()
@@ -109,7 +110,7 @@ class Peer:
 
         try:
             await self.send_interested(writer)
-        except Exception as e:
+        except Exception:
             print('\nFailed at sending interested to Peer {}\n'.format(self.host))
             self.inflight_requests -= 1
             # traceback.print_exc()
@@ -119,7 +120,7 @@ class Peer:
         while True:
             try:
                 resp = await asyncio.wait_for(reader.read(16384), timeout=10)
-            except Exception as e:
+            except Exception:
                 print('\nFailed at Reading data from Peer {}\n'.format(self.host))
                 self.inflight_requests -= 1
                 # traceback.print_exc()
@@ -139,12 +140,11 @@ class Peer:
                 if not len(buf) >= length:
                     break
 
-                def consume(buf):
-                    buf = buf[4 + length:]
-                    return buf
+                def consume(buffer):
+                    return buffer[4 + length:]
 
-                def get_data(buf):
-                    return buf[:4 + length]
+                def get_data(buffer):
+                    return buffer[:4 + length]
 
                 if length == 0:
                     print('[Message] Keep Alive')
@@ -201,9 +201,9 @@ class Peer:
                     data = get_data(buf)
                     buf = consume(buf)
 
-                    l = struct.unpack('>I', data[:4])[0]
+                    payload = struct.unpack('>I', data[:4])[0]
                     try:
-                        parts = struct.unpack('>IbII' + str(l - 9) + 's', data[:length + 4])
+                        parts = struct.unpack('>IbII' + str(payload - 9) + 's', data[:length + 4])
                         piece_idx, begin, data = parts[2], parts[3], parts[4]
                         self.session.on_block_received(piece_idx, begin, data)
                     except struct.error:
@@ -219,7 +219,7 @@ class Peer:
 
                 try:
                     await self.request_a_piece(writer)
-                except Exception as e:
+                except Exception:
                     print('\n{} Failed at requesting a piece\n'.format(self.host))
                     self.inflight_requests -= 1
                     # traceback.print_exc()

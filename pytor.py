@@ -18,15 +18,15 @@ class Piece(object):
     def __init__(self, index: int, blocks: list, file_name: str, file_idx: int, in_conflict: bool, fracture_idx: int):
         self.index: int = index
         self.blocks: list = blocks
-        self.downloaded_blocks: bitstring.BitArray = \
-            bitstring.BitArray(bin='0' * len(blocks))
+        self.downloaded_blocks: bitstring.BitArray = bitstring.BitArray(bin='0' * len(blocks))
         self.in_conflict: bool = in_conflict
         self.fracture_idx: int = fracture_idx
         self.file_name: str = file_name
         self.file_idx: int = file_idx
 
     def flush(self):
-        [block.flush() for block in self.blocks]
+        for block in self.blocks:
+            block.flush()
 
     def is_complete(self) -> bool:
         """
@@ -86,22 +86,21 @@ class Block(object):
 class DownloadSession(object):
     def __init__(self, torrent: Torrent, writer: asyncio.Queue = None):
         self.torrent: Torrent = torrent
-        self.piece_size: int = self.torrent._metaData[b'info'][b'piece length']
+        self.piece_size: int = self.torrent.metaData[b'info'][b'piece length']
         self.number_of_pieces: int = self.torrent.number_of_pieces
-        if self.torrent._mode == 'multiple':
+        if self.torrent.mode == 'multiple':
             self.fractures = self.torrent.fractures
-            print("DLSESSION", self.torrent._mode, self.fractures)
-            self.file_names = [os.path.join(*file[b'path']).decode() for file in
-                               self.torrent._files]  # Files list for popping in order, then processed path key to get final name
+            print("DLSESSION", self.torrent.mode, self.fractures)
+            self.file_names = [os.path.join(*file[b'path']).decode() for file in self.torrent.files]
+            # Files list for popping in order, then processed path key to get final name
 
         self.pieces: list = self.get_pieces()
         self.pieces_in_progress: Dict[int, Piece] = {}
         self.received_pieces: Dict[int, Piece] = {}
         self.received_pieces_queue: asyncio.Queue = writer
-        self.info_hash = self.torrent._info_hash
+        self.info_hash = self.torrent.info_hash
 
     def on_block_received(self, piece_idx, begin, data):
-
         piece = self.pieces[piece_idx]
         piece.save_block(begin, data)
 
@@ -135,7 +134,6 @@ class DownloadSession(object):
         """
         Generates list of pieces and their blocks
         """
-
         # FILE_ITER is the file's number
         # FILE_IDX is the piece's index inside its file
         pieces = []
@@ -148,22 +146,26 @@ class DownloadSession(object):
             blocks = []
             outcome = False
             # brkpt()
-            if self.torrent._mode == 'multiple':
+            if self.torrent.mode == 'multiple':
                 piece_end = piece_idx * self.piece_size + self.piece_size
                 piece_beg = piece_idx * self.piece_size
-                file_idx = piece_beg - fracture  # Piece's absolute index - previous fracture point i.e previous files' length
-                if len(self.fractures) > 1:  # Probabaly not needed  ####TEST####
+                file_idx = piece_beg - fracture
+                # Piece's absolute index - previous fracture point i.e previous files' length
+                if len(self.fractures) > 1:  # Probably not needed, TEST this
                     if self.fractures[file_iter] <= piece_end:
                         if self.fractures[file_iter] >= piece_beg:
-                            # Piece ends after fracture point and also starts before fracture point, therefore the piece is in conflict
+                            # Piece ends after fracture point and also starts before fracture point,
+                            # therefore the piece is in conflict
                             print('Fracture found in piece {} at {}'.format(piece_idx, fracture))
                             outcome = True
-                            file_name = self.file_names[file_iter] + '|' + self.file_names[
-                                file_iter + 1]  # Assigning file names for both files, existing in the piece in conflict, concatenated with a '|' pipe
+                            file_name = self.file_names[file_iter] + '|' + self.file_names[file_iter + 1]
+                            # Assigning file names for both files, existing in the piece in conflict,
+                            # concatenated with a '|' pipe
                             fracture = self.fractures[file_iter]
                             file_iter += 1
                         else:
-                            # Piece ends after fracture point but does not start before fracture, therefore belongs to a future file and getting here is an ANOMALY
+                            # Piece ends after fracture point but does not start before fracture,
+                            # therefore belongs to a future file and getting here is an ANOMALY
                             print("[ERROR] FUTURE FILE PIECE ANOMALY")
                     else:
                         # Piece ends before fracture point, going in order, so belongs to current file
@@ -234,11 +236,11 @@ class Tee(object):
         self.files = files
 
     def write(self, obj):
-        for f in self.files:
-            f.write(obj)
+        for file in self.files:
+            file.write(obj)
 
 
-async def download(torrent_file: str, download_location: str, loop=None):
+async def download(torrent_file: str, download_location: str):
     torrent = Torrent(torrent_file)
 
     torrent_writer = FileSaver(download_location, torrent)
@@ -247,7 +249,7 @@ async def download(torrent_file: str, download_location: str, loop=None):
     done_pieces = 0
 
     while done_pieces < torrent.number_of_pieces:
-        await torrent._get_peers()
+        await torrent.get_peers()
         peers_info = list(set(torrent.peers))
 
         seen_peers = set()
@@ -291,5 +293,5 @@ if __name__ == '__main__':
     sys.stdout = Tee(sys.stdout, f)
 
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(download(sys.argv[1], './downloads', loop=loop))
+    loop.run_until_complete(download(sys.argv[1], './downloads'))
     loop.close()
