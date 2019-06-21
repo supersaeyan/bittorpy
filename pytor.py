@@ -337,6 +337,7 @@ if __name__ == '__main__':
     sys.stdout = Tee(sys.stdout, f)
 
     # TODO Complete static typing everywhere
+    # TODO Find small multiple and single file torrents for testing
     # TODO 100% test coverage before adding/moding a line of code
     # TODO some GUI status update per piece/block, files -> pieces -> blocks hierarchy
     loop = asyncio.get_event_loop()
