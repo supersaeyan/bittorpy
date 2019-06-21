@@ -13,7 +13,15 @@ import requests
 from pybtracker import TrackerClient
 
 
+# TODO Decode the whole thing to a map of python str
 class Torrent:
+    """
+    # TODO Move torrent and Magnet to a single common Metadata source module
+    # TODO Add mainline DHT
+    # TODO Write adapters to create a common format data out of
+
+    Representation of the metadata from bdecoding a Torrent file
+    """
     def __init__(self, file_path):
         if os.path.isfile(file_path) and file_path.split('.')[-1] == 'torrent':
             with open(file_path, 'rb') as f:
@@ -82,9 +90,18 @@ class Torrent:
         # print(self.peers)
 
     def get_piece_hash(self, piece_idx):
+        """
+        Gets the hash of a particular piece using piece index, from a concatenated string of SHA1 hashes of all pieces
+        :param piece_idx: piece index
+        :return: piece hash
+        """
         return self._pieces[piece_idx*20: (piece_idx*20) + 20]
 
     def __parse_files(self):
+        """
+        Parses metaData[b'info'][b'files'] in case of multiple file mode
+        :return: parsed_files list, total length of all files and fracture indexes
+        """
         parsed_files = []
         fractures = []
         total_length = 0
@@ -104,6 +121,11 @@ class Torrent:
         return parsed_files, total_length, fractures
 
     async def udp_tracker_client(self, url):
+        """
+        UDP Tracker client implementation
+        :param url: tracker url
+        :return: peers
+        """
         client = TrackerClient(announce_uri=url)
         await asyncio.wait_for(client.start(), timeout=10)
         peers = await asyncio.wait_for(client.announce(
@@ -118,6 +140,11 @@ class Torrent:
         return peers
 
     async def get_peers(self, numwant=100):
+        """
+        # TODO Separate out metadata parsing and HTTP client implementation
+        HTTP(S) Tracker client implementation
+        :param numwant: required number of peers
+        """
         peer_id = 'SA' + ''.join(
             random.choice(string.ascii_lowercase + string.digits)
             for _ in range(18)

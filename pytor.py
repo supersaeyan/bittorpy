@@ -1,12 +1,12 @@
 import asyncio
 import hashlib
-import math
 import os
 import sys
 from pprint import pformat, pprint
 from typing import Dict
 
 import bitstring
+import math
 from tqdm import tqdm
 
 from file_saver import FileSaver
@@ -14,7 +14,10 @@ from peer import Peer
 from torrent import Torrent
 
 
-class Piece(object):
+class Piece:
+    """
+    Representation of a File's piece
+    """
     def __init__(self, index: int, blocks: list, file_name: str, file_idx: int, in_conflict: bool, fracture_idx: int):
         self.index: int = index
         self.blocks: list = blocks
@@ -25,6 +28,9 @@ class Piece(object):
         self.file_idx: int = file_idx
 
     def flush(self):
+        """
+        Releasing a Piece from memory by releasing all child block's memory
+        """
         for block in self.blocks:
             block.flush()
 
@@ -36,7 +42,10 @@ class Piece(object):
 
     def save_block(self, begin: int, data: bytes):
         """
+        # TODO Move to Block class
         Writes block 'data' into block object
+        :param begin: Index where a the block begins
+        :param data: Block data to be saved
         """
         for block_idx, block in enumerate(self.blocks):
             if block.begin == begin:
@@ -52,6 +61,9 @@ class Piece(object):
 
     @property
     def hash(self):
+        """
+        SHA1 hash value for the piece
+        """
         return hashlib.sha1(self.data)
 
     def __repr__(self):
@@ -65,7 +77,11 @@ class Piece(object):
         )
 
 
-class Block(object):
+class Block:
+    """
+    Representation of a block
+    A Block belongs to a Piece
+    """
     def __init__(self, piece, begin, length):
         self.piece = piece
         self.begin = begin
@@ -73,6 +89,9 @@ class Block(object):
         self.data = None
 
     def flush(self):
+        """
+        Release Block memory
+        """
         self.data = None
 
     def __repr__(self):
@@ -84,6 +103,10 @@ class Block(object):
 
 
 class DownloadSession(object):
+    """
+    Representation of a torrent download
+    """
+
     def __init__(self, torrent: Torrent, writer: asyncio.Queue = None):
         self.torrent: Torrent = torrent
         self.piece_size: int = self.torrent.metaData[b'info'][b'piece length']
@@ -100,7 +123,13 @@ class DownloadSession(object):
         self.received_pieces_queue: asyncio.Queue = writer
         self.info_hash = self.torrent.info_hash
 
-    def on_block_received(self, piece_idx, begin, data):
+    def on_block_received(self, piece_idx: int, begin: int, data):
+        """
+        Task performed after receiving a block
+        :param piece_idx: index of the piece, the block belongs to
+        :param begin: Block begin index
+        :param data: Block data received
+        """
         piece = self.pieces[piece_idx]
         piece.save_block(begin, data)
 
@@ -127,6 +156,8 @@ class DownloadSession(object):
         # Only runs when a piece is complete
         # Double braces because one set is for the tuple being sent
         del self.pieces_in_progress[piece_idx]  # Not in progress anymore
+        # Queue it to the writer
+        # TODO Structure piece topic properly
         self.received_pieces_queue.put_nowait((piece.index * self.piece_size, piece.file_idx, piece_data,
                                                piece.in_conflict, piece.fracture_idx, piece.file_name, piece))
 
@@ -231,16 +262,29 @@ class DownloadSession(object):
         return pformat(data)
 
 
-class Tee(object):
+class Tee:
+    """
+    Redirect stdio/stderr to a file
+    """
+
     def __init__(self, *files):
         self.files = files
 
     def write(self, obj):
+        """
+        Write to a file
+        :param obj: object to be written
+        """
         for file in self.files:
             file.write(obj)
 
 
 async def download(torrent_file: str, download_location: str):
+    """
+    Download coroutine to start a download by accepting a torrent file and download location
+    :param torrent_file: torrent file to be downloaded
+    :param download_location: location to download it to
+    """
     torrent = Torrent(torrent_file)
 
     torrent_writer = FileSaver(download_location, torrent)
@@ -292,6 +336,9 @@ if __name__ == '__main__':
     backup = sys.stdout
     sys.stdout = Tee(sys.stdout, f)
 
+    # TODO Complete static typing everywhere
+    # TODO 100% test coverage before adding/moding a line of code
+    # TODO some GUI status update per piece/block, files -> pieces -> blocks hierarchy
     loop = asyncio.get_event_loop()
     loop.run_until_complete(download(sys.argv[1], './downloads'))
     loop.close()

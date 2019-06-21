@@ -5,6 +5,12 @@ import bitstring
 
 
 class Peer:
+    """
+    # TODO Move peer wire protocol implementation out of this class
+    # TODO Understand struct thoroughly
+    # TODO Implement seeding spec as well
+    Representation of a peer and implementation of peer wire protocol
+    """
     def __init__(self, session, host, port):
         self.host = host
         self.port = port
@@ -19,6 +25,10 @@ class Peer:
         self.inflight_requests = 0
 
     def handshake(self):
+        """
+        Peer wire protocol handshake
+        :return:
+        """
         return struct.pack(
             '>B19s8x20s20s',
             19,
@@ -29,6 +39,9 @@ class Peer:
 
     @staticmethod
     async def send_interested(writer):
+        """
+        Peer wire protocol setting interested to 1
+        """
         msg = struct.pack('>Ib', 1, 2)
         writer.write(msg)
         # print("\nBefore draining writer in send interested for {}\n".format(self.host))
@@ -36,7 +49,12 @@ class Peer:
         # print("\nAfter draining writer in send interested for {}\n".format(self.host))
 
     def get_blocks_generator(self):
-        def blocks():
+        """
+        # TODO Refactor
+        Lazy eval for generating blocks
+        :return: blocks generator
+        """
+        def _blocks():
             while True:
                 try:
                     piece = self.session.get_piece_request(self.have_pieces)
@@ -48,10 +66,13 @@ class Peer:
                     return
 
         if not self.blocks:
-            self.blocks = blocks()
+            self.blocks = _blocks()
         return self.blocks
 
     async def request_a_piece(self, writer):
+        """
+        Peer wire protocol to request a piece
+        """
         if self.inflight_requests > 1:
             print('ALERT!', self.inflight_requests)
             return
@@ -69,6 +90,9 @@ class Peer:
         # print("\nAfter draining writer in request a piece for {}\n".format(self.host))
 
     async def download(self):
+        """
+        Peer wire protocol to download a piece
+        """
         retries = 0
         while retries < 5:
             retries += 1
@@ -82,6 +106,9 @@ class Peer:
                 # traceback.print_exc()
 
     async def _download(self):
+        """
+        Peer wire protocol implementation
+        """
         try:
             reader, writer = await asyncio.wait_for(
                 asyncio.open_connection(self.host, self.port),

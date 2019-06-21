@@ -2,7 +2,11 @@ import asyncio
 import os
 
 
-class FileSaver(object):
+class FileSaver:
+    """
+    # TODO Implement async write and replace Queue worker with just callback to producer task completions
+    File saver worker(consumer) to pop pieces(topics) and write them synchronously
+    """
     def __init__(self, outdir, torrent):
         self.torrent = torrent
         self.file_path = os.path.join(outdir, torrent.name.decode())
@@ -22,9 +26,18 @@ class FileSaver(object):
         asyncio.ensure_future(self.write())
 
     def get_received_pieces_queue(self):
+        """
+        Interface to expose the completed pieces queue
+        :return: queue
+        """
         return self.received_pieces_queue
 
     async def write(self):
+        """
+        # TODO Separate out worker and writing corouting
+           And handle errors by requeuing the piece and not performing cleanups, if cleaned up, update piece DL status
+        Piece writing coroutine with an infinite blocking worker
+        """
         while True:
             piece = await asyncio.wait_for(self.received_pieces_queue.get(), timeout=5)
             if not piece:
