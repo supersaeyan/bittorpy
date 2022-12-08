@@ -4,7 +4,7 @@ asynctest==0.5.0
 attrs==19.1.0
 bencoding==0.2.6
 bitstring==3.1.5
-certifi==2019.3.9
+certifi==2022.12.7
 chardet==3.0.4
 idna==2.8
 multidict==4.5.2
